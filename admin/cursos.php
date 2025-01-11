@@ -1,3 +1,34 @@
+<?php 
+include('../php/cone.php');
+
+// Mostrar registros de cursos
+$conn = Conexion();
+$stmt = $conn->prepare("
+    SELECT cursos.id, cursos.nombre, usuarios.nombre AS profesor
+    FROM cursos
+    LEFT JOIN usuarios ON cursos.profesor_id = usuarios.id
+");
+$stmt->execute();
+$cursos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Verificar si se ha enviado el formulario para eliminar un curso
+if (isset($_POST['id'])) {
+    $id_curso = $_POST['id'];
+
+    // Eliminar al curso de la base de datos
+    $conn = Conexion();
+    $stmt = $conn->prepare("DELETE FROM cursos WHERE id = :id");
+    $stmt->bindParam(':id', $id_curso, PDO::PARAM_INT);
+
+    if ($stmt->execute()) {
+        // Redirigir a la misma página después de la eliminación
+        header("Location: cursos.php");
+        exit; // Asegurarse de que el código después de la redirección no se ejecute
+    } else {
+        echo "Error al eliminar el curso";
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -91,11 +122,6 @@
 				<li class="pull-left">
 					<a href="#!" class="btn-menu-dashboard"><i class="zmdi zmdi-more-vert"></i></a>
 				</li>
-				<li>
-					<a href="#!" class="btn-modal-help">
-						<i class="zmdi zmdi-help-outline"></i>
-					</a>
-				</li>
 			</ul>
 		</nav>
 		<!-- Content page -->
@@ -108,141 +134,44 @@
 			<div class="row">
 				<div class="col-xs-12">
 					<ul class="nav nav-tabs" style="margin-bottom: 15px;">
-					  	<li class="active"><a href="#new" data-toggle="tab">Crear</a></li>
-					  	<li><a href="#list" data-toggle="tab">Lista</a></li>
+					  	<li class="active"><a href="#list" data-toggle="tab">Lista</a></li>
+					  	<li><a href="cursosl.php">Registrar</a></li>
 					</ul>
-					<div id="myTabContent" class="tab-content">
-						<div class="tab-pane fade active in" id="new">
-							<div class="container-fluid">
-								<div class="row">
-									<div class="col-xs-12 col-md-10 col-md-offset-1">
-									    <form action="">
-									    	<div class="form-group label-floating">
-											  <label class="control-label">Name</label>
-											  <input class="form-control" type="text">
-											</div>
-											<div class="form-group">
-										      <label class="control-label">Status</label>
-										        <select class="form-control">
-										          <option>Active</option>
-										          <option>Disable</option>
-										        </select>
-										    </div>
-											<div class="form-group">
-											  <label class="control-label">Start Date</label>
-											  <input class="form-control" type="date">
-											</div>
-											<div class="form-group">
-											  <label class="control-label">End Date</label>
-											  <input class="form-control" type="date">
-											</div>
-											<div class="form-group label-floating">
-											  <label class="control-label">Amount</label>
-											  <input class="form-control" type="text">
-											</div>
-											<div class="form-group">
-										        <label class="control-label">Year</label>
-										        <select class="form-control">
-										          <option>2017</option>
-										          <option>2016</option>
-										        </select>
-										    </div>
-										    <p class="text-center">
-										    	<button href="#!" class="btn btn-info btn-raised btn-sm"><i class="zmdi zmdi-floppy"></i> Save</button>
-										    </p>
-									    </form>
-									</div>
-								</div>
-							</div>
+					<div class="tab-pane fade active in" id="list">
+						<div class="table-responsive">
+							<table class="table table-hover text-center">
+								<thead>
+									<tr>
+										<th class="text-center">id</th>
+										<th class="text-center">Nombre</th>
+										<th class="text-center">Profesor</th>
+										<th class="text-center">Borrar curso</th>
+									</tr>
+								</thead>
+								<tbody>
+									<?php foreach ($cursos as $curso): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($curso['id']) ?></td>
+                                        <td><?= htmlspecialchars($curso['nombre']) ?></td>
+                                        <td><?= htmlspecialchars($curso['profesor']) ?></td>
+                                        <td>
+                                            <form action="cursos.php" method="POST" id="form-eliminar-<?= htmlspecialchars($curso['id']) ?>">
+                                                <input type="hidden" name="id" value="<?= htmlspecialchars($curso['id']) ?>">
+                                                <button type="button" class="btn btn-danger btn-raised btn-xs btn-ddbe" data-id="<?= htmlspecialchars($curso['id']) ?>">
+                                                    <i class="zmdi zmdi-delete"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+								</tbody>
+							</table>
 						</div>
-					  	<div class="tab-pane fade" id="list">
-							<div class="table-responsive">
-								<table class="table table-hover text-center">
-									<thead>
-										<tr>
-											<th class="text-center">#</th>
-											<th class="text-center">Name</th>
-											<th class="text-center">Status</th>
-											<th class="text-center">Start Date</th>
-											<th class="text-center">End Date</th>
-											<th class="text-center">Amount</th>
-											<th class="text-center">year</th>
-											<th class="text-center">Update</th>
-											<th class="text-center">Delete</th>
-										</tr>
-									</thead>
-									<tbody>
-										<tr>
-											<td>1</td>
-											<td>First</td>
-											<td>Active</td>
-											<td>07/01/2017</td>
-											<td>06/04/2017</td>
-											<td>$40</td>
-											<td>2017</td>
-											<td><a href="#!" class="btn btn-success btn-raised btn-xs"><i class="zmdi zmdi-refresh"></i></a></td>
-											<td><a href="#!" class="btn btn-danger btn-raised btn-xs"><i class="zmdi zmdi-delete"></i></a></td>
-										</tr>
-										<tr>
-											<td>2</td>
-											<td>Second</td>
-											<td>Active</td>
-											<td>07/04/2017</td>
-											<td>06/08/2017</td>
-											<td>$40</td>
-											<td>2017</td>
-											<td><a href="#!" class="btn btn-success btn-raised btn-xs"><i class="zmdi zmdi-refresh"></i></a></td>
-											<td><a href="#!" class="btn btn-danger btn-raised btn-xs"><i class="zmdi zmdi-delete"></i></a></td>
-										</tr>
-										<tr>
-											<td>3</td>
-											<td>Third</td>
-											<td>Active</td>
-											<td>07/08/2017</td>
-											<td>06/12/2017</td>
-											<td>$40</td>
-											<td>2017</td>
-											<td><a href="#!" class="btn btn-success btn-raised btn-xs"><i class="zmdi zmdi-refresh"></i></a></td>
-											<td><a href="#!" class="btn btn-danger btn-raised btn-xs"><i class="zmdi zmdi-delete"></i></a></td>
-										</tr>
-									</tbody>
-								</table>
-								<ul class="pagination pagination-sm">
-								  	<li class="disabled"><a href="#!">«</a></li>
-								  	<li class="active"><a href="#!">1</a></li>
-								  	<li><a href="#!">2</a></li>
-								  	<li><a href="#!">3</a></li>
-								  	<li><a href="#!">4</a></li>
-								  	<li><a href="#!">5</a></li>
-								  	<li><a href="#!">»</a></li>
-								</ul>
-							</div>
-					  	</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</section>
-
-	<!-- Dialog help -->
-	<div class="modal fade" tabindex="-1" role="dialog" id="Dialog-Help">
-	  	<div class="modal-dialog" role="document">
-		    <div class="modal-content">
-			    <div class="modal-header">
-			        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-			    	<h4 class="modal-title">Help</h4>
-			    </div>
-			    <div class="modal-body">
-			        <p>
-			        	Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nesciunt beatae esse velit ipsa sunt incidunt aut voluptas, nihil reiciendis maiores eaque hic vitae saepe voluptatibus. Ratione veritatis a unde autem!
-			        </p>
-			    </div>
-		      	<div class="modal-footer">
-		        	<button type="button" class="btn btn-primary btn-raised" data-dismiss="modal"><i class="zmdi zmdi-thumb-up"></i> Ok</button>
-		      	</div>
-		    </div>
-	  	</div>
-	</div>
 	<!--====== Scripts -->
 	<script src="./js/jquery-3.1.1.min.js"></script>
 	<script src="./js/sweetalert2.min.js"></script>
@@ -254,5 +183,26 @@
 	<script>
 		$.material.init();
 	</script>
+	<script>
+        $(document).ready(function(){
+            $('.btn-ddbe').on('click', function(){
+                var courseId = $(this).data('id');
+                var form = $('#form-eliminar-' + courseId); // Encontramos el formulario correspondiente
+
+                swal({
+                    title: '¿Seguro que desea eliminar este curso?',
+                    text: 'Esta acción no puede deshacerse.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#640d14',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Confirmar',
+                    cancelButtonText: 'Cancelar'
+                }).then(function () {
+                    form.submit(); // Enviamos el formulario si el usuario confirma
+                });
+            });
+        });
+    </script>
 </body>
 </html>

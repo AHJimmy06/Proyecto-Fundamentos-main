@@ -159,7 +159,7 @@ if(isset($_POST['registrar']))
 			<div class="row">
 				<div class="col-xs-12">
 					<ul class="nav nav-tabs bg-red" style="margin-bottom: 15px;">
-						<li class><a href="estudiantes.php">Lista</a></li>
+						<li><a href="estudiantes.php">Lista</a></li>
 					  	<li class="active"><a href="#new" data-toggle="tab">Registrar</a></li>
 					</ul>
 					<div class="tab-pane fade active in" id="new">
