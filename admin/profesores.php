@@ -1,3 +1,36 @@
+<?php 
+include('../php/cone.php');
+
+// Mostrar registros de profesores
+$conn = Conexion();
+$stmt = $conn->prepare("
+    SELECT u.id, u.nombre, u.correo, u.cedula, u.fecha_registro, p.especialidad
+    FROM usuarios u
+    JOIN profesores p ON u.id = p.usuario_id
+    WHERE u.rol = 'profesor'
+");
+$stmt->execute();
+$profesores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Verificar si se ha enviado el formulario para eliminar un profesor
+if (isset($_POST['id'])) {
+    $id_profesor = $_POST['id'];
+
+    // Eliminar al profesor de la base de datos
+    $conn = Conexion();
+    $stmt = $conn->prepare("DELETE FROM usuarios WHERE id = :id");
+    $stmt->bindParam(':id', $id_profesor, PDO::PARAM_INT);
+
+    if ($stmt->execute()) {
+        // Redirigir a la misma página después de la eliminación
+        header("Location: profesores.php");
+        exit; // Asegurarse de que el código después de la redirección no se ejecute
+    } else {
+        echo "Error al eliminar el profesor";
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -91,11 +124,7 @@
 				<li class="pull-left">
 					<a href="#!" class="btn-menu-dashboard"><i class="zmdi zmdi-more-vert"></i></a>
 				</li>
-				<li>
-					<a href="#!" class="btn-modal-help">
-						<i class="zmdi zmdi-help-outline"></i>
-					</a>
-				</li>
+				
 			</ul>
 		</nav>
 		<!-- Content page -->
@@ -108,173 +137,52 @@
 			<div class="row">
 				<div class="col-xs-12">
 					<ul class="nav nav-tabs bg-red" style="margin-bottom: 15px;">
-					  	<li class="active"><a href="#new" data-toggle="tab">Registrar</a></li>
-					  	<li><a href="#list" data-toggle="tab">Lista</a></li>
+					  	<li class="active"><a href="#list" data-toggle="tab">Lista</a></li>
+					  	<li><a href="profesoresl.php" >Registrar</a></li>
 					</ul>
-					<div id="myTabContent" class="tab-content">
-						<div class="tab-pane fade active in" id="new">
-							<div class="container-fluid">
-								<div class="row">
-									<div class="col-xs-12 col-md-10 col-md-offset-1">
-									    <form action="">
-									    	<div class="form-group label-floating">
-											  <label class="control-label">Name</label>
-											  <input class="form-control" type="text">
-											</div>
-											<div class="form-group label-floating">
-											  <label class="control-label">Last Name</label>
-											  <input class="form-control" type="text">
-											</div>
-											<div class="form-group label-floating">
-											  <label class="control-label">Address</label>
-											  <textarea class="form-control"></textarea>
-											</div>
-											<div class="form-group label-floating">
-											  <label class="control-label">Email</label>
-											  <input class="form-control" type="text">
-											</div>
-											<div class="form-group label-floating">
-											  <label class="control-label">Phone</label>
-											  <input class="form-control" type="text">
-											</div>
-											<div class="form-group label-floating">
-											  <label class="control-label">Specialty</label>
-											  <input class="form-control" type="text">
-											</div>
-											<div class="form-group">
-											  <label class="control-label">Birthday</label>
-											  <input class="form-control" type="date">
-											</div>
-											<div class="form-group">
-										        <label class="control-label">Gender</label>
-										        <select class="form-control">
-										          <option>Male</option>
-										          <option>Female</option>
-										        </select>
-										    </div>
-											<div class="form-group">
-										      <label class="control-label">Photo</label>
-										      <div>
-										        <input type="text" readonly="" class="form-control" placeholder="Browse...">
-										        <input type="file" >
-										      </div>
-										    </div>
-										    <p class="text-center">
-										    	<button href="#!" class="btn btn-info btn-raised btn-sm"><i class="zmdi zmdi-floppy"></i> Save</button>
-										    </p>
-									    </form>
-									</div>
-								</div>
-							</div>
+					<div class="tab-pane fade active in" id="list">
+						<div class="table-responsive">
+							<table class="table table-hover text-center">
+								<thead>
+									<tr>
+										<th class="text-center">id</th>
+										<th class="text-center">Nombre Completo</th>
+										<th class="text-center">Especialidad</th>
+										<th class="text-center">Corrreo</th>
+										<th class="text-center">Cédula</th>
+										<th class="text-center">Fecha Registro</th>
+										<th class="text-center">Dar de baja</th>
+									</tr>
+								</thead>
+								<tbody>
+								<?php foreach ($profesores as $profesor): ?>
+									<tr>
+										<td><?= htmlspecialchars($profesor['id']) ?></td>
+										<td><?= htmlspecialchars($profesor['nombre']) ?></td>
+										<td><?= htmlspecialchars($profesor['especialidad']) ?></td>
+										<td><?= htmlspecialchars($profesor['correo']) ?></td>
+										<td><?= htmlspecialchars($profesor['cedula']) ?></td>
+										<td><?= htmlspecialchars($profesor['fecha_registro']) ?></td>
+										<td>
+											<form action="profesores.php" method="POST" id="form-eliminar-<?= htmlspecialchars($profesor['id']) ?>">
+                                                <input type="hidden" name="id" value="<?= htmlspecialchars($profesor['id']) ?>">
+                                                <button type="button" class="btn btn-danger btn-raised btn-xs btn-ddbe" data-id="<?= htmlspecialchars($profesor['id']) ?>">
+                                                    <i class="zmdi zmdi-delete"></i>
+                                                </button>
+                                            </form>
+										</td>
+									</tr>
+									<?php endforeach; ?>
+								</tbody>
+							</table>
 						</div>
-					  	<div class="tab-pane fade" id="list">
-							<div class="table-responsive">
-								<table class="table table-hover text-center">
-									<thead>
-										<tr>
-											<th class="text-center">#</th>
-											<th class="text-center">Nombre</th>
-											<th class="text-center">Apellido</th>
-											<th class="text-center">Dirección</th>
-											<th class="text-center">Correo</th>
-											<th class="text-center">Teléfono</th>
-											<th class="text-center">Type</th>
-											<th class="text-center">Section</th>
-											<th class="text-center">Update</th>
-											<th class="text-center">Delete</th>
-										</tr>
-									</thead>
-									<tbody>
-										<tr>
-											<td>1</td>
-											<td>Carlos</td>
-											<td>Alfaro</td>
-											<td>El Salvador</td>
-											<td>carlos@gmail.com</td>
-											<td>+50312345678</td>
-											<td>IT</td>
-											<td>07/03/1997</td>
-											<td>Male</td>
-											<td><a href="#!" class="btn btn-success btn-raised btn-xs"><i class="zmdi zmdi-refresh"></i></a></td>
-											<td><a href="#!" class="btn btn-danger btn-raised btn-xs"><i class="zmdi zmdi-delete"></i></a></td>
-										</tr>
-										<tr>
-											<td>2</td>
-											<td>Alicia</td>
-											<td>Melendez</td>
-											<td>El Salvador</td>
-											<td>alicia@gmail.com</td>
-											<td>+50312345678</td>
-											<td>Social Work</td>
-											<td>23/07/1997</td>
-											<td>Female</td>
-											<td><a href="#!" class="btn btn-success btn-raised btn-xs"><i class="zmdi zmdi-refresh"></i></a></td>
-											<td><a href="#!" class="btn btn-danger btn-raised btn-xs"><i class="zmdi zmdi-delete"></i></a></td>
-										</tr>
-										<tr>
-											<td>3</td>
-											<td>Sarai</td>
-											<td>Lopez</td>
-											<td>El Salvador</td>
-											<td>sarai@gmail.com</td>
-											<td>+50312345678</td>
-											<td>Lawyer</td>
-											<td>10/09/1991</td>
-											<td>Female</td>
-											<td><a href="#!" class="btn btn-success btn-raised btn-xs"><i class="zmdi zmdi-refresh"></i></a></td>
-											<td><a href="#!" class="btn btn-danger btn-raised btn-xs"><i class="zmdi zmdi-delete"></i></a></td>
-										</tr>
-										<tr>
-											<td>4</td>
-											<td>Alba</td>
-											<td>Bonilla</td>
-											<td>El Salvador</td>
-											<td>alba@gmail.com</td>
-											<td>+50312345678</td>
-											<td>Designer</td>
-											<td>19/04/1993</td>
-											<td>Female</td>
-											<td><a href="#!" class="btn btn-success btn-raised btn-xs"><i class="zmdi zmdi-refresh"></i></a></td>
-											<td><a href="#!" class="btn btn-danger btn-raised btn-xs"><i class="zmdi zmdi-delete"></i></a></td>
-										</tr>
-									</tbody>
-								</table>
-								<ul class="pagination pagination-sm">
-								  	<li class="disabled"><a href="#!">«</a></li>
-								  	<li class="active"><a href="#!">1</a></li>
-								  	<li><a href="#!">2</a></li>
-								  	<li><a href="#!">3</a></li>
-								  	<li><a href="#!">4</a></li>
-								  	<li><a href="#!">5</a></li>
-								  	<li><a href="#!">»</a></li>
-								</ul>
-							</div>
-					  	</div>
 					</div>
+				
 				</div>
 			</div>
 		</div>
 	</section>
 
-	<!-- Dialog help -->
-	<div class="modal fade" tabindex="-1" role="dialog" id="Dialog-Help">
-	  	<div class="modal-dialog" role="document">
-		    <div class="modal-content">
-			    <div class="modal-header">
-			        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-			    	<h4 class="modal-title">Ayuda</h4>
-			    </div>
-			    <div class="modal-body">
-			        <p>
-						En este apartado podrás......
-					</p>
-			    </div>
-		      	<div class="modal-footer">
-		        	<button type="button" class="btn btn-primary btn-raised" data-dismiss="modal"><i class="zmdi zmdi-thumb-up"></i> Ok</button>
-		      	</div>
-		    </div>
-	  	</div>
-	</div>
 	<!--====== Scripts -->
 	<script src="./js/jquery-3.1.1.min.js"></script>
 	<script src="./js/sweetalert2.min.js"></script>
@@ -286,5 +194,26 @@
 	<script>
 		$.material.init();
 	</script>
+	<script>
+        $(document).ready(function(){
+            $('.btn-ddbe').on('click', function(){
+                var profesorId = $(this).data('id');
+                var form = $('#form-eliminar-' + profesorId); // Encontramos el formulario correspondiente
+
+                swal({
+                    title: '¿Seguro que desea dar de baja al profesor?',
+                    text: 'Esta acción no puede deshacerse.',
+                    type: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#640d14',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Confirmar',
+                    cancelButtonText: 'Cancelar'
+                }).then(function () {
+                    form.submit(); // Enviamos el formulario si el usuario confirma
+                });
+            });
+        });
+    </script>
 </body>
 </html>
