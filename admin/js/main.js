@@ -34,6 +34,16 @@ $(document).ready(function(){
 		  	confirmButtonText: ' Continuar',
 		});
 	});
+	$('.btn-formpro').on('click', function(){
+		swal({
+		  	title: 'Formato de Registro',
+			html: `<div class="form-group label-floating"> <label class="control-label"> Nombre Completo </label> <input class="form-control" type="text" id="nombre" name="nombre" required disabled value="Juan Carlos Perez Zuñiga" </div> <div class="form-group label-floating"><label class="control-label">Cédula</label><input class="form-control" type="text" name="cedula" disabled value="1850645657" ></div><div class="form-group label-floating"> <label class="control-label"> Especialidad </label> <input class="form-control" type="text" id="nombre" name="nombre" required disabled value="Matemáticas"> </div>` ,
+		  	type: 'info',
+		  	showCancelButton: false,
+		  	confirmButtonColor: '#640d14',
+		  	confirmButtonText: ' Continuar',
+		});
+	});
 	$('.btn-menu-dashboard').on('click', function(){
 		var body=$('.dashboard-contentPage');
 		var sidebar=$('.dashboard-sideBar');
