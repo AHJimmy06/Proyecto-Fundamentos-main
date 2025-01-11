@@ -108,15 +108,15 @@
 			<div class="row">
 				<div class="col-xs-12">
 					<ul class="nav nav-tabs" style="margin-bottom: 15px;">
-					  	<li class="active"><a href="#newSchool" data-toggle="tab"><i class="zmdi zmdi-balance"></i> Facultad</a></li>
+					  	<li class="active"><a href="#newSchool" data-toggle="tab"><i class="zmdi zmdi-balance"></i> Contribuidores</a></li>
 					  	<li><a href="#listYear" data-toggle="tab"><i class="zmdi zmdi-calendar-note"></i> Versión</a></li>
 					</ul>
 					<div class="tab-content">
 						<div class="tab-pane fade active in" id="newSchool">
-							sdfsdfds
+							<strong><h1 class="text-center">Contribuidores</h1></strong>
 						</div>
 					  	<div class="tab-pane fade" id="listYear">
-							sadfasfasfasfas
+						  <strong><h1 class="text-center">2.SW."A".24.25</h1></strong>
 						</div>
 					</div>
 				</div>
