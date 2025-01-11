@@ -21,7 +21,7 @@ $(document).ready(function(){
 		  	confirmButtonText: '<i class="zmdi zmdi-run"></i> Si, salir!',
 		  	cancelButtonText: '<i class="zmdi zmdi-close-circle"></i> No, Cancelar!'
 		}).then(function () {
-			window.location.href="#!";
+			window.location.href="../php/csesion.php";
 		});
 	});
 	$('.btn-form').on('click', function(){

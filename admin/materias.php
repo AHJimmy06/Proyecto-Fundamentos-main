@@ -1,4 +1,8 @@
 <?php 
+
+include('../php/verificar_acceso.php');
+	verificarAcceso('admin');
+
 include('../php/cone.php');
 
 // Mostrar registros de materias
@@ -33,7 +37,7 @@ if (isset($_POST['id'])) {
 <!DOCTYPE html>
 <html lang="es">
 <head>
-	<title>Subject</title>
+	<title>FISEI || Materia</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
 	<link rel="stylesheet" href="./css/main.css">
@@ -48,19 +52,12 @@ if (isset($_POST['id'])) {
 			 	<img src="../img/nav.png" width="250px"> <i class="zmdi zmdi-close btn-menu-dashboard visible-xs"></i>
 			</div>
 			<!-- SideBar User info -->
-			<div class="full-box dashboard-sideBar-UserInfo">
-				<figure class="full-box">
-					<figcaption class="text-center text-titles">User Name</figcaption>
-				</figure>
+			<div class="full-box dashboard-sideBar-UserInfo text-center">
+					<h3>Administrador</h3>
 				<ul class="full-box list-unstyled text-center">
-					<li>
-						<a href="#!">
-							<i class="zmdi zmdi-settings"></i>
-						</a>
-					</li>
-					<li>
+					<li >
 						<a href="#!" class="btn-exit-system">
-							<i class="zmdi zmdi-power"></i>
+							<i class="zmdi zmdi-power zmdi-hc-fw"></i>Cerrar Sesión
 						</a>
 					</li>
 				</ul>
@@ -95,9 +92,6 @@ if (isset($_POST['id'])) {
 						</li>
 						<li>
 							<a href="materias.php"><i class="zmdi zmdi-book zmdi-hc-fw"></i> Materias</a>
-						</li>
-						<li>
-							<a href="clases.php"><i class="zmdi zmdi-graduation-cap zmdi-hc-fw"></i> Clases</a>
 						</li>
 					</ul>
 				</li>

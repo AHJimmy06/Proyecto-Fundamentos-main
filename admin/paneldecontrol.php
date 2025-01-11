@@ -1,7 +1,33 @@
+<?php
+
+include('../php/verificar_acceso.php');
+verificarAcceso('admin');
+
+include('../php/cone.php');
+$conn = Conexion();
+// Consultas para obtener el número de registros
+$profesoresQuery = "SELECT COUNT(*) AS total FROM profesores";
+$estudiantesQuery = "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'estudiante'";
+$cursosQuery = "SELECT COUNT(*) AS total FROM cursos";
+$materiasQuery = "SELECT COUNT(*) AS total FROM materias";
+
+// Ejecutar las consultas y obtener los resultados
+$profesoresResult = $conn->query($profesoresQuery)->fetch(PDO::FETCH_ASSOC);
+$estudiantesResult = $conn->query($estudiantesQuery)->fetch(PDO::FETCH_ASSOC);
+$cursosResult = $conn->query($cursosQuery)->fetch(PDO::FETCH_ASSOC);
+$materiasResult = $conn->query($materiasQuery)->fetch(PDO::FETCH_ASSOC);
+
+// Obtener los resultados
+$profesoresCount = $profesoresResult['total'];
+$estudiantesCount = $estudiantesResult['total'];
+$cursosCount = $cursosResult['total'];
+$materiasCount = $materiasResult['total'];
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-	<title>Inicio</title>
+	<title>FISEI || Panel de Control</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
 	<link rel="stylesheet" href="./css/main.css">
@@ -16,19 +42,12 @@
 			 	<img src="../img/nav.png" width="250px"> <i class="zmdi zmdi-close btn-menu-dashboard visible-xs"></i>
 			</div>
 			<!-- SideBar User info -->
-			<div class="full-box dashboard-sideBar-UserInfo">
-				<figure class="full-box">
-					<figcaption class="text-center text-titles">User Name</figcaption>
-				</figure>
+			<div class="full-box dashboard-sideBar-UserInfo text-center">
+					<h3>Administrador</h3>
 				<ul class="full-box list-unstyled text-center">
-					<li>
-						<a href="#!">
-							<i class="zmdi zmdi-settings"></i>
-						</a>
-					</li>
-					<li>
+					<li >
 						<a href="#!" class="btn-exit-system">
-							<i class="zmdi zmdi-power"></i>
+							<i class="zmdi zmdi-power zmdi-hc-fw"></i>Cerrar Sesión
 						</a>
 					</li>
 				</ul>
@@ -64,9 +83,6 @@
 						<li>
 							<a href="materias.php"><i class="zmdi zmdi-book zmdi-hc-fw"></i> Materias</a>
 						</li>
-						<li>
-							<a href="clases.php"><i class="zmdi zmdi-graduation-cap zmdi-hc-fw"></i> Clases</a>
-						</li>
 					</ul>
 				</li>
 				<li>
@@ -92,11 +108,6 @@
 				<li class="pull-left">
 					<a href="#!" class="btn-menu-dashboard"><i class="zmdi zmdi-more-vert"></i></a>
 				</li>
-				<li>
-					<a href="#!" class="btn-modal-help">
-						<i class="zmdi zmdi-help-outline"></i>
-					</a>
-				</li>
 			</ul>
 		</nav>
 		<!-- Content page -->
@@ -114,7 +125,7 @@
 					<i class="zmdi zmdi-male-alt"></i>
 				</div>
 				<div class="full-box tile-number text-titles">
-					<p class="full-box">10</p>
+					<p class="full-box"><?php echo $profesoresCount; ?></p>
 					<small>Registrados</small>
 				</div>
 			</article>
@@ -126,7 +137,7 @@
 					<i class="zmdi zmdi-face"></i>
 				</div>
 				<div class="full-box tile-number text-titles">
-					<p class="full-box">70</p>
+					<p class="full-box"><?php echo $estudiantesCount; ?></p>
 					<small>Registrados</small>
 				</div>
 			</article>
@@ -138,7 +149,19 @@
 					<i class="zmdi zmdi-male-female"></i>
 				</div>
 				<div class="full-box tile-number text-titles">
-					<p class="full-box">7</p>
+					<p class="full-box"><?php echo $cursosCount; ?></p>
+					<small>Registrados</small>
+				</div>
+			</article>
+			<article class="full-box tile">
+				<div class="full-box tile-title text-center text-titles text-uppercase ">
+					Materias
+				</div>
+				<div class="full-box tile-icon text-center">
+					<i class="zmdi zmdi-male-female"></i>
+				</div>
+				<div class="full-box tile-number text-titles">
+					<p class="full-box"><?php echo $materiasCount; ?></p>
 					<small>Registrados</small>
 				</div>
 			</article>
@@ -149,26 +172,6 @@
 
 		</div>
 	</section>
-
-	<!-- Dialog help -->
-	<div class="modal fade" tabindex="-1" role="dialog" id="Dialog-Help">
-	  	<div class="modal-dialog" role="document">
-		    <div class="modal-content">
-			    <div class="modal-header">
-			        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-			    	<h4 class="modal-title">Ayuda</h4>
-			    </div>
-			    <div class="modal-body">
-			        <p>
-						En este apartado podrás.......
-			        </p>
-			    </div>
-		      	<div class="modal-footer">
-		        	<button type="button" class="btn btn-primary btn-raised" data-dismiss="modal"><i class="zmdi zmdi-thumb-up"></i> Ok</button>
-		      	</div>
-		    </div>
-	  	</div>
-	</div>
 	<!--====== Scripts -->
 	<script src="./js/jquery-3.1.1.min.js"></script>
 	<script src="./js/sweetalert2.min.js"></script>

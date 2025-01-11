@@ -3,7 +3,7 @@ function verificarAcceso($rolPermitido) {
     session_start();
     if (!isset($_SESSION['usuario']) || !isset($_SESSION['rol'])) {
         // Redirige a la página de inicio de sesión si no hay sesión
-        header("Location: login.php");
+        header("Location: ../index.php");
         exit();
     }
 
