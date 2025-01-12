@@ -18,6 +18,17 @@ $cursos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if (isset($_POST['id'])) {
     $id_curso = $_POST['id'];
 
+	// Eliminar inscripciones relacionadas con el curso
+    $conn = Conexion();
+    $stmt = $conn->prepare("DELETE FROM inscripciones WHERE materia_id IN (SELECT id FROM materias WHERE curso_id = :curso_id)");
+    $stmt->bindParam(':curso_id', $id_curso, PDO::PARAM_INT);
+    $stmt->execute();
+
+    // Eliminar materias asociadas al curso
+    $stmt = $conn->prepare("DELETE FROM materias WHERE curso_id = :curso_id");
+    $stmt->bindParam(':curso_id', $id_curso, PDO::PARAM_INT);
+    $stmt->execute();
+
     // Eliminar al curso de la base de datos
     $conn = Conexion();
     $stmt = $conn->prepare("DELETE FROM cursos WHERE id = :id");

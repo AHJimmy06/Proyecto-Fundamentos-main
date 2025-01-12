@@ -18,8 +18,10 @@ if (!empty($_POST)) {
             session_start();
             $_SESSION['usuario'] = $resultado['correo'];
             $_SESSION['rol'] = $resultado['rol'];
+            $_SESSION['id']=$resultado['id'];
             
             $tipo = $resultado['rol'];
+            
             if ($tipo === 'admin') {
                 header("Location: admin/paneldecontrol.php");
             } elseif ($tipo === 'profesor') {

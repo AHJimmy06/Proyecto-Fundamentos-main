@@ -6,47 +6,97 @@ verificarAcceso('profesor');
 include('../php/cone.php');
 $conn = Conexion();
 
+// Obtener ID del profesor
+$profesorId = $_SESSION['id']; // Suponiendo que el ID del profesor está en la sesión
+
+// Peso máximo en bytes (5 MB)
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 // Manejar envío del formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $materiaId = $_POST['materia_id'];
-  $fecha = $_POST['fecha'];
-  $tema = $_POST['tema'];
+    $materiaId = $_POST['materia_id'];
+    $fecha = $_POST['fecha'];
+    $tema = $_POST['tema'];
+    $archivoSubido = isset($_FILES['material_apoyo']) ? $_FILES['material_apoyo'] : null;
 
-  if (!empty($materiaId) && !empty($fecha) && !empty($tema)) {
-      // Insertar nueva clase en la base de datos
-      $stmt = $conn->prepare("INSERT INTO clases (materia_id, fecha, tema) VALUES (:materia_id, :fecha, :tema)");
-      $stmt->bindValue(':materia_id', $materiaId);
-      $stmt->bindValue(':fecha', $fecha);
-      $stmt->bindValue(':tema', $tema);
+    if (!empty($materiaId) && !empty($fecha) && !empty($tema)) {
+        try {
+            // Validar tamaño del archivo
+            if ($archivoSubido && $archivoSubido['error'] === UPLOAD_ERR_OK) {
+                if ($archivoSubido['size'] > MAX_FILE_SIZE) {
+                    throw new Exception('El archivo supera el tamaño máximo permitido de 5 MB.');
+                }
+            }
 
-      if ($stmt->execute()) {
-          echo '<div class="alert alert-success">Clase creada exitosamente</div>';
-          echo '<script>document.getElementById("fecha").value = ""; document.getElementById("tema").value = ""; document.getElementById("materia_id").selectedIndex = 0;</script>';
-      } else {
-          echo '<div class="alert alert-danger">Error al crear la clase</div>';
-      }
-  } else {
-      echo '<div class="alert alert-warning">Todos los campos son obligatorios</div>';
-  }
+            // Iniciar transacción
+            $conn->beginTransaction();
+
+            // Insertar nueva clase en la base de datos
+            $stmt = $conn->prepare("INSERT INTO clases (materia_id, fecha, tema) VALUES (:materia_id, :fecha, :tema)");
+            $stmt->bindValue(':materia_id', $materiaId);
+            $stmt->bindValue(':fecha', $fecha);
+            $stmt->bindValue(':tema', $tema);
+            $stmt->execute();
+
+            $claseId = $conn->lastInsertId(); // Obtener el ID de la clase creada
+
+            // Manejar archivo subido
+            if ($archivoSubido && $archivoSubido['error'] === UPLOAD_ERR_OK) {
+                $nombreArchivo = basename($archivoSubido['name']);
+                $rutaArchivo = '../archivos/' . uniqid() . '_' . $nombreArchivo;
+                $tipoArchivo = $archivoSubido['type'];
+
+                // Mover archivo al directorio de almacenamiento
+                if (move_uploaded_file($archivoSubido['tmp_name'], $rutaArchivo)) {
+                    // Insertar registro en la tabla `archivos`
+                    $stmtArchivo = $conn->prepare(
+                        "INSERT INTO archivos (nombre_archivo, tipo_archivo, ruta_archivo, usuario_id, tarea_id) 
+                         VALUES (:nombre_archivo, :tipo_archivo, :ruta_archivo, :usuario_id, NULL)"
+                    );
+                    $stmtArchivo->bindValue(':nombre_archivo', $nombreArchivo);
+                    $stmtArchivo->bindValue(':tipo_archivo', $tipoArchivo);
+                    $stmtArchivo->bindValue(':ruta_archivo', $rutaArchivo);
+                    $stmtArchivo->bindValue(':usuario_id', $profesorId);
+                    $stmtArchivo->execute();
+                } else {
+                    throw new Exception('Error al mover el archivo al directorio de almacenamiento.');
+                }
+            }
+
+            $conn->commit();
+            echo '<div class="alert alert-success">Clase creada exitosamente con material de apoyo.</div>';
+        } catch (Exception $e) {
+            $conn->rollBack();
+            echo '<div class="alert alert-danger">Error al crear la clase: ' . htmlspecialchars($e->getMessage()) . '</div>';
+        }
+    } else {
+        echo '<div class="alert alert-warning">Todos los campos son obligatorios.</div>';
+    }
 }
 
-
-// Obtener materias disponibles para el combobox
-$stmt = $conn->prepare("SELECT m.id, m.nombre, m.descripcion, c.nombre AS curso_nombre 
-                        FROM materias m
-                        JOIN cursos c ON m.curso_id = c.id");
+// Obtener materias disponibles para el profesor
+$stmt = $conn->prepare(
+    "SELECT m.id, m.nombre, m.descripcion, c.nombre AS curso_nombre 
+     FROM materias m
+     JOIN cursos c ON m.curso_id = c.id
+     WHERE c.profesor_id = :profesor_id"
+);
+$stmt->bindValue(':profesor_id', $profesorId);
 $stmt->execute();
 $materias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Obtener clases registradas
-$stmt = $conn->prepare("SELECT clases.id, materias.nombre AS materia_nombre, cursos.nombre AS curso_nombre, clases.fecha, clases.tema
-                        FROM clases
-                        JOIN materias ON clases.materia_id = materias.id
-                        JOIN cursos ON materias.curso_id = cursos.id");
+$stmt = $conn->prepare(
+    "SELECT clases.id, materias.nombre AS materia_nombre, cursos.nombre AS curso_nombre, clases.fecha, clases.tema
+     FROM clases
+     JOIN materias ON clases.materia_id = materias.id
+     JOIN cursos ON materias.curso_id = cursos.id
+     WHERE cursos.profesor_id = :profesor_id"
+);
+$stmt->bindValue(':profesor_id', $profesorId);
 $stmt->execute();
 $clases = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -70,9 +120,6 @@ $clases = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <li class="nav-item">
           <a class="nav-link" href="crear_tarea.php">Crear Tarea</a>
         </li>
-        <!-- <li class="nav-item">
-          <a class="nav-link" href="c_docentes.php">Agregar Estudiante</a>
-        </li> -->
       </ul>
       <a class="nav-link end-0 position-absolute me-4" href="../php/csesion.php">Cerrar sesion</a>
     </div>
@@ -81,7 +128,7 @@ $clases = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <div class="container shadow-lg rounded p-4 mt-3">
     <h2>Crear Clase</h2>
-    <form method="POST" action="">
+    <form method="POST" action="" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="materia_id" class="form-label">Materia</label>
             <select class="form-select" id="materia_id" name="materia_id" required>
@@ -95,11 +142,16 @@ $clases = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div class="mb-3">
             <label for="fecha" class="form-label">Fecha</label>
-            <input type="date" class="form-control" id="fecha" name="fecha" required>
+            <input type="date" class="form-control" id="fecha" name="fecha" value="<?= date('Y-m-d') ?>" disabled>
+            <input type="hidden" name="fecha" value="<?= date('Y-m-d') ?>">
         </div>
         <div class="mb-3">
             <label for="tema" class="form-label">Tema</label>
             <input type="text" class="form-control" id="tema" name="tema" required>
+        </div>
+        <div class="mb-3">
+            <label for="material_apoyo" class="form-label">Material de Apoyo</label>
+            <input type="file" class="form-control" id="material_apoyo" name="material_apoyo">
         </div>
         <button type="submit" class="btn btn-primary">Crear Clase</button>
     </form>
@@ -139,5 +191,14 @@ $clases = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <script src="../js/bootstrap.js"></script>   
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const archivo = document.getElementById('material_apoyo').files[0];
+    if (archivo && archivo.size > 5 * 1024 * 1024) {
+        e.preventDefault();
+        alert('El archivo no puede superar los 5 MB.');
+    }
+});
+</script>
 </body>
 </html>
