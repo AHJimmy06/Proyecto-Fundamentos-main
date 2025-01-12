@@ -1,46 +1,46 @@
 <?php 
-
 include('../php/verificar_acceso.php');
-	verificarAcceso('admin');
+verificarAcceso('admin');
 
 include('../php/cone.php');
 
-
-
-// Mostrar registros estudiantes
+// Mostrar registros de inscripciones
 $conn = Conexion();
-
 $stmt = $conn->prepare("
-    SELECT u.id, u.nombre, u.correo, u.cedula, u.fecha_registro, e.matricula
-    FROM usuarios u
-    INNER JOIN estudiantes e ON u.id = e.usuario_id
-    WHERE u.rol = 'estudiante'
+    SELECT i.id AS inscripcion_id, e.id AS estudiante_id, e.usuario_id, u.nombre AS estudiante, 
+           m.nombre AS materia, p.nombre AS profesor
+    FROM inscripciones i
+    JOIN estudiantes e ON i.estudiante_id = e.id
+    JOIN usuarios u ON e.usuario_id = u.id
+    JOIN materias m ON i.materia_id = m.id
+    LEFT JOIN cursos c ON m.curso_id = c.id
+    LEFT JOIN usuarios p ON c.profesor_id = p.id
 ");
-
 $stmt->execute();
-$estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-// Verificar si se ha enviado el formulario para eliminar un estudiante
-if (isset($_POST['id'])) {
-    $id_estudiante = $_POST['id'];
+$inscripciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Eliminar al estudiante de la base de datos
+// Verificar si se ha enviado el formulario para eliminar una inscripción
+if (isset($_POST['id'])) {
+    $id_inscripcion = $_POST['id'];
+
+    // Eliminar inscripción de la base de datos
     $conn = Conexion();
-    $stmt = $conn->prepare("DELETE FROM usuarios WHERE id = :id");
-    $stmt->bindParam(':id', $id_estudiante, PDO::PARAM_INT);
+    $stmt = $conn->prepare("DELETE FROM inscripciones WHERE id = :id");
+    $stmt->bindParam(':id', $id_inscripcion, PDO::PARAM_INT);
 
     if ($stmt->execute()) {
-		// Redirigir a la misma página después de la eliminación
-        header("Location: estudiantes.php");
-		exit; // Asegurarse de que el código después de la redirección no se ejecute
+        // Redirigir a la misma página después de la eliminación
+        header("Location: inscripciones.php");
+        exit; // Asegurarse de que el código después de la redirección no se ejecute
     } else {
-        echo "Error al eliminar el estudiante";
+        echo "Error al eliminar la inscripción";
     }
 }
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
-	<title>FISEI || Estudiantes</title>
+	<title>FISEI || Cursos</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
 	<link rel="stylesheet" href="./css/main.css">
@@ -118,7 +118,7 @@ if (isset($_POST['id'])) {
 	<!-- Content page-->
 	<section class="full-box dashboard-contentPage">
 		<!-- NavBar -->
-		<nav class="full-box dashboard-Navbar bg-red">
+		<nav class="full-box dashboard-Navbar">
 			<ul class="full-box list-unstyled text-right">
 				<li class="pull-left">
 					<a href="#!" class="btn-menu-dashboard"><i class="zmdi zmdi-more-vert"></i></a>
@@ -128,61 +128,54 @@ if (isset($_POST['id'])) {
 		<!-- Content page -->
 		<div class="container-fluid">
 			<div class="page-header">
-			  <h1 class="text-titles"><i class="zmdi zmdi-face zmdi-hc-fw"></i>  Estudiantes</h1>
+			  <h1 class="text-titles"><i class="zmdi zmdi-font zmdi-hc-fw"></i>Inscripciones  </h1>
 			</div>
-			<p class="lead"></p>
 		</div>
 		<div class="container-fluid">
 			<div class="row">
 				<div class="col-xs-12">
-					<ul class="nav nav-tabs bg-red" style="margin-bottom: 15px;">
-						<li class="active"><a href="#list" data-toggle="tab">Lista</a></li>
-					  	<li><a href="estudiantesl.php">Registrar</a></li>
+					<ul class="nav nav-tabs" style="margin-bottom: 15px;">
+					  	<li class="active"><a href="#list" data-toggle="tab">Lista</a></li>
+					  	<li><a href="inscripcionesl.php">Registrar</a></li>
 					</ul>
-					  	<div class="tab-pane fade active in" id="list">
-							<div class="table-responsive">
-								<table class="table table-hover text-center">
-									<thead>
-										<tr>
-											<th class="text-center">Id</th>
-											<th class="text-center">Nombre Completo</th>
-											<th class="text-center">Correo</th>
-											<th class="text-center">Cédula</th>
-											<th class="text-center">Matricula</th>
-											<th class="text-center">Fecha Registro</th>
-											<th class="text-center">Dar de baja</th>
-										</tr>
-									</thead>
-									<tbody>
-										<?php foreach ($estudiantes as $estudiante): ?>
-										<tr>
-											<td><?= htmlspecialchars($estudiante['id']) ?></td>
-											<td><?= htmlspecialchars($estudiante['nombre']) ?></td>
-											<td><?= htmlspecialchars($estudiante['correo']) ?></td>
-											<td><?= htmlspecialchars($estudiante['cedula']) ?></td>
-											<td><?= htmlspecialchars($estudiante['matricula']) ?></td>
-											<td><?= htmlspecialchars($estudiante['fecha_registro']) ?></td>
-											<td><form action="estudiantes.php" method="POST" id="form-eliminar-<?= htmlspecialchars($estudiante['id']) ?>">
-                                                <input type="hidden" name="id" value="<?= htmlspecialchars($estudiante['id']) ?>">
-                                                <button type="button" class="btn btn-danger btn-raised btn-xs btn-ddbe" data-id="<?= htmlspecialchars($estudiante['id']) ?>">
+					<div class="tab-pane fade active in" id="list">
+						<div class="table-responsive">
+							<table class="table table-hover text-center">
+								<thead>
+									<tr>
+										<th class="text-center">id</th>
+										<th class="text-center">Materia</th>
+										<th class="text-center">Estudiante</th>
+                                        <th class="text-center">Profesor</th>
+										<th class="text-center">Borrar inscripcion</th>
+									</tr>
+								</thead>
+								<tbody>
+								<?php foreach ($inscripciones as $inscripcion): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($inscripcion['inscripcion_id']) ?></td>
+                                        <td><?= htmlspecialchars($inscripcion['estudiante']) ?></td>
+                                        <td><?= htmlspecialchars($inscripcion['materia']) ?></td>
+                                        <td><?= htmlspecialchars($inscripcion['profesor']) ?></td>
+                                        <td>
+                                            <form action="inscripciones.php" method="POST" id="form-eliminar-<?= htmlspecialchars($inscripcion['inscripcion_id']) ?>">
+                                                <input type="hidden" name="id" value="<?= htmlspecialchars($inscripcion['inscripcion_id']) ?>">
+                                                <button type="button" class="btn btn-danger btn-raised btn-xs btn-ddbe" data-id="<?= htmlspecialchars($inscripcion['inscripcion_id']) ?>">
                                                     <i class="zmdi zmdi-delete"></i>
                                                 </button>
                                             </form>
-
-											</td>
-										</tr>
-										<?php endforeach; ?>
-									</tbody>
-								</table>
-							</div>
-					  	</div>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+								</tbody>
+							</table>
+						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</section>
-
-	<!-- Scripts -->
+	<!--====== Scripts -->
 	<script src="./js/jquery-3.1.1.min.js"></script>
 	<script src="./js/sweetalert2.min.js"></script>
 	<script src="./js/bootstrap.min.js"></script>
@@ -192,15 +185,15 @@ if (isset($_POST['id'])) {
 	<script src="./js/main.js"></script>
 	<script>
 		$.material.init();
-	</script>	
-<script>
+	</script>
+	<script>
         $(document).ready(function(){
             $('.btn-ddbe').on('click', function(){
-                var studentId = $(this).data('id');
-                var form = $('#form-eliminar-' + studentId); // Encontramos el formulario correspondiente
+                var courseId = $(this).data('id');
+                var form = $('#form-eliminar-' + courseId); // Encontramos el formulario correspondiente
 
                 swal({
-                    title: '¿Seguro que desea dar de baja al estudiante?',
+                    title: '¿Seguro que desea eliminar este curso?',
                     text: 'Esta acción no puede deshacerse.',
                     type: 'warning',
                     showCancelButton: true,

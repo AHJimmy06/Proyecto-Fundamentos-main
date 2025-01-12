@@ -16,6 +16,7 @@ if(isset($_POST['registrar']))
 {
     $nombre=$_POST['nombre'];
     $cedula=$_POST['cedula'];
+	$matricula = $_POST['matricula'];
 
 	$sql_check="SELECT * FROM usuarios WHERE cedula = :cedula";
 	$stmt_check= $conn->prepare($sql_check);
@@ -38,6 +39,15 @@ if(isset($_POST['registrar']))
 		$cedula=$_POST['cedula'];
 		$rol='estudiante';
 		$stmt1->execute();
+		
+		$usuario_id = $conn->lastInsertId();
+
+		$sql_estudiante = "INSERT INTO estudiantes (usuario_id, matricula) VALUES (:usuario_id, :matricula)";
+        $stmt_estudiante = $conn->prepare($sql_estudiante);
+        $stmt_estudiante->bindParam(':usuario_id', $usuario_id);
+        $stmt_estudiante->bindParam(':matricula', $matricula);
+        $stmt_estudiante->execute();
+
 		$conn->commit();
 		
 		$sql_get = "SELECT correo, contrasenia FROM usuarios WHERE cedula = :cedula";
@@ -116,6 +126,9 @@ if(isset($_POST['registrar']))
 						<li>
 							<a href="materias.php"><i class="zmdi zmdi-book zmdi-hc-fw"></i> Materias</a>
 						</li>
+						<li>
+							<a href="inscripciones.php"><i class="zmdi zmdi-font zmdi-hc-fw"></i> Inscripciones</a>
+						</li>
 					</ul>
 				</li>
 				<li>
@@ -131,7 +144,6 @@ if(isset($_POST['registrar']))
 			</ul>
 		</div>
 	</section>
-
 	<!-- Content page-->
 	<section class="full-box dashboard-contentPage">
 		<!-- NavBar -->
@@ -169,7 +181,11 @@ if(isset($_POST['registrar']))
                                         <div class="form-group label-floating">
                                             <label class="control-label" for="cedula">Cédula</label>
                                             <input class="form-control" type="text" maxlength="10" id="cedula" name="cedula" required pattern="[0-9]+">
-                                            </div>
+                                        </div>
+										<div class="form-group label-floating">
+                                            <label class="control-label" for="matricula">Matrícula</label>
+                                            <input class="form-control" type="text" maxlength="8" id="matricula" name="matricula" required>
+                                        </div>
                                         <p class="text-center">
                                             <button  id="formbtn" name="registrar" type="submit" class="btn btn-info btn-raised btn-sm" disabled><i class="zmdi zmdi-floppy"></i> Registrar</button>
                                         </p>

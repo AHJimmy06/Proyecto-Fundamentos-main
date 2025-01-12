@@ -119,6 +119,9 @@ if (isset($_POST['registrar'])) {
 						<li>
 							<a href="materias.php"><i class="zmdi zmdi-book zmdi-hc-fw"></i> Materias</a>
 						</li>
+						<li>
+							<a href="inscripciones.php"><i class="zmdi zmdi-font zmdi-hc-fw"></i> Inscripciones</a>
+						</li>
 					</ul>
 				</li>
 				<li>
