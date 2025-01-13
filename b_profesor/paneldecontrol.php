@@ -7,6 +7,7 @@ include('../php/cone.php');
 $conn = Conexion();
 // Obtener ID del profesor
 $profesorId = $_SESSION['id'];
+$profesorNombre =$_SESSION['nombre'];
 
 // Obtener el número de cursos que imparte el profesor
 $queryCursos = "SELECT COUNT(*) AS total_cursos FROM cursos WHERE profesor_id = :profesorId";
@@ -61,7 +62,8 @@ $totalTareas = $rowTareas['total_tareas'];
 			</div>
 			<!-- SideBar User info -->
 			<div class="full-box dashboard-sideBar-UserInfo text-center">
-					<h3>Profesor</h3>
+                    <h4> ¡Bienvenido!</h4>
+					<h3><?php echo htmlspecialchars($profesorNombre); ?></h3>
 				<ul class="full-box list-unstyled text-center">
 					<li >
 						<a href="#!" class="btn-exit-system">

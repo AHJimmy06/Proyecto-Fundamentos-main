@@ -19,13 +19,13 @@ if (!empty($_POST)) {
             $_SESSION['usuario'] = $resultado['correo'];
             $_SESSION['rol'] = $resultado['rol'];
             $_SESSION['id']=$resultado['id'];
-            
+            $_SESSION['nombre']=$resultado['nombre'];
             $tipo = $resultado['rol'];
             
             if ($tipo === 'admin') {
                 header("Location: admin/paneldecontrol.php");
             } elseif ($tipo === 'profesor') {
-                header("Location: b_profesor/crear_clase.php");
+                header("Location: b_profesor/paneldecontrol.php");
             } elseif ($tipo === 'estudiante') {
                 header("Location: b_estudiante/estudiante.php");
             }
