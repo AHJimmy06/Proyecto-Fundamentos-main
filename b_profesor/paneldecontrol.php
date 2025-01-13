@@ -80,7 +80,7 @@ $totalTareas = $rowTareas['total_tareas'];
 					</a>
 				</li>
                 <li>
-					<a href="crear_clase.php">
+					<a href="clase.php">
                         <i class="zmdi zmdi-book zmdi-hc-fw"></i> Clases
 					</a>
 				</li>
