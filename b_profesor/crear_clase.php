@@ -64,13 +64,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $conn->commit();
-            echo '<div class="alert alert-success">Clase creada exitosamente con material de apoyo.</div>';
+            $alert_type = "success";
+            $alert_title = "Clase creada correctamente";
+            $alert_message = "Clase creada exitosamente con material de apoyo.";
         } catch (Exception $e) {
             $conn->rollBack();
-            echo '<div class="alert alert-danger">Error al crear la clase: ' . htmlspecialchars($e->getMessage()) . '</div>';
+            $alert_type = "error";
+            $alert_title = "Error al crear la clase";
+            $alert_message = "Error al crear la clase: " . htmlspecialchars($e->getMessage());
         }
     } else {
-        echo '<div class="alert alert-warning">Todos los campos son obligatorios.</div>';
+        $alert_type = "warning";
+        $alert_title = "Campos incompletos";
+        $alert_message = "Todos los campos son obligatorios.";
     }
 }
 
@@ -97,108 +103,146 @@ $stmt->bindValue(':profesor_id', $profesorId);
 $stmt->execute();
 $clases = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profesor | FISEI</title>
-    <link href="../css/bootstrap.css" rel="stylesheet">
+	<title>FISEI || Cursos</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+	<link rel="stylesheet" href="./css/main.css">
 </head>
-<body class="bg-body-tertiary">
-<nav class="navbar navbar-expand-lg bg-white">
-  <div class="container-fluid">
-  <img src="../img/nav.png" alt="Logo" width="130" height="70" class="d-inline-block align-text-top">
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav">
-        <li class="nav-item">
-          <a class="nav-link" href="crear_clase.php">Crear Clase</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="crear_tarea.php">Crear Tarea</a>
-        </li>
-      </ul>
-      <a class="nav-link end-0 position-absolute me-4" href="../php/csesion.php">Cerrar sesion</a>
-    </div>
-  </div>
-</nav>
+<body>
+	<!-- SideBar -->
+	<section class="full-box cover dashboard-sideBar ">
+		<div class="full-box btn-menu-dashboard "></div>
+		<div class="full-box dashboard-sideBar-ct ">
+			<!--SideBar Title -->
+			<div class="full-box text-uppercase text-center text-titles dashboard-sideBar-title ">
+			 	<img src="../img/nav.png" width="250px"> <i class="zmdi zmdi-close btn-menu-dashboard visible-xs"></i>
+			</div>
+			<!-- SideBar User info -->
+			<div class="full-box dashboard-sideBar-UserInfo text-center">
+					<h3>Profesor</h3>
+				<ul class="full-box list-unstyled text-center">
+					<li >
+						<a href="#!" class="btn-exit-system">
+							<i class="zmdi zmdi-power zmdi-hc-fw"></i>Cerrar Sesión
+						</a>
+					</li>
+				</ul>
+			</div>
+			<!-- SideBar Menu -->
+			<ul class="list-unstyled full-box dashboard-sideBar-Menu">
+				<li>
+					<a href="paneldecontrol.php">
+						<i class="zmdi zmdi-view-dashboard zmdi-hc-fw"></i> Panel de Control
+					</a>
+				</li>
+                <li>
+					<a href="paneldecontrol.php">
+                        <i class="zmdi zmdi-book zmdi-hc-fw"></i> Clases
+					</a>
+				</li>
+                <li>
+					<a href="paneldecontrol.php">
+                        <i class="zmdi zmdi-timer zmdi-hc-fw"></i> Tareas 
+					</a>
+				</li>
+			</ul>
+		</div>
+	</section>
 
-<div class="container shadow-lg rounded p-4 mt-3">
-    <h2>Crear Clase</h2>
-    <form method="POST" action="" enctype="multipart/form-data">
-        <div class="mb-3">
-            <label for="materia_id" class="form-label">Materia</label>
-            <select class="form-select" id="materia_id" name="materia_id" required>
-                <option value="" disabled selected>Selecciona una materia</option>
-                <?php foreach ($materias as $materia): ?>
-                    <option value="<?= htmlspecialchars($materia['id']) ?>">
-                        <?= htmlspecialchars($materia['nombre']) ?> (<?= htmlspecialchars($materia['curso_nombre']) ?>)
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label for="fecha" class="form-label">Fecha</label>
-            <input type="date" class="form-control" id="fecha" name="fecha" value="<?= date('Y-m-d') ?>" disabled>
-            <input type="hidden" name="fecha" value="<?= date('Y-m-d') ?>">
-        </div>
-        <div class="mb-3">
-            <label for="tema" class="form-label">Tema</label>
-            <input type="text" class="form-control" id="tema" name="tema" required>
-        </div>
-        <div class="mb-3">
-            <label for="material_apoyo" class="form-label">Material de Apoyo</label>
-            <input type="file" class="form-control" id="material_apoyo" name="material_apoyo">
-        </div>
-        <button type="submit" class="btn btn-primary">Crear Clase</button>
-    </form>
+	<!-- Content page-->
+	<section class="full-box dashboard-contentPage">
+		<!-- NavBar -->
+		<nav class="full-box dashboard-Navbar">
+			<ul class="full-box list-unstyled text-right">
+				<li class="pull-left">
+					<a href="#!" class="btn-menu-dashboard"><i class="zmdi zmdi-more-vert"></i></a>
+				</li>
+			</ul>
+		</nav>
+		<!-- Content page -->
+		<div class="container-fluid">
+			<div class="page-header">
+			  <h1 class="text-titles"><i class="zmdi zmdi-timer zmdi-hc-fw"></i> Cursos </h1>
+			</div>
+		</div>
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-xs-12">
+					<ul class="nav nav-tabs" style="margin-bottom: 15px;">
+					  	<li><a href="cursos.php">Lista</a></li>
+					  	<li class="active"><a href="#new" data-toggle="tab">Registrar</a></li>
+					</ul>
+					<div class="tab-pane fade active in" id="new">
+						<div class="container-fluid">
+							<div class="row">
+								<div class="col-xs-12 col-md-10 col-md-offset-1">
+								<form method="POST" id="formcurso">
+									<div class="form-group label-floating">
+										<label class="control-label" for="nombre">Nombre</label>
+										<input class="form-control" type="text" id="nombre" name="nombre" required>
+									</div>
+									<div class="form-group label-floating">
+										<label class="control-label" for="descripcion">Descripción</label>
+										<input class="form-control" type="text" id="descripcion" name="descripcion" required>
+									</div>
+									<div class="form-group">
+										<label class="control-label" for="profesor_id">Profesor a cargo</label>
+										<select class="form-control" name="profesor_id" id="profesor_id" required>
+											<option value="">Seleccione un profesor</option>
+											<?php foreach ($profesores as $profesor): ?>
+												<option value="<?php echo $profesor['id']; ?>"><?php echo htmlspecialchars($profesor['nombre']); ?></option>
+											<?php endforeach; ?>
+										</select>
+									</div>
+									<p class="text-center" >
+										<button id="form-btn" name="registrar" type="submit" class="btn btn-info btn-raised btn-sm" disabled><i class="zmdi zmdi-floppy"></i> Registrar</button>
+									</p>
+								</form>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
 
-    <h3 class="mt-4">Clases Registradas</h3>
-    <?php if (count($clases) > 0): ?>
-        <table class="table table-bordered mt-3">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Materia</th>
-                    <th>Curso</th>
-                    <th>Fecha</th>
-                    <th>Tema</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($clases as $clase): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($clase['id']) ?></td>
-                        <td><?= htmlspecialchars($clase['materia_nombre']) ?></td>
-                        <td><?= htmlspecialchars($clase['curso_nombre']) ?></td>
-                        <td><?= htmlspecialchars($clase['fecha']) ?></td>
-                        <td><?= htmlspecialchars($clase['tema']) ?></td>
-                        <td>
-                            <a href="editar_clase.php?id=<?= $clase['id'] ?>" class="btn btn-warning btn-sm">Editar</a>
-                            <a href="eliminar_clase.php?id=<?= $clase['id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas eliminar esta clase?')">Eliminar</a>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php else: ?>
-        <p class="mt-3">No se han registrado clases</p>
+    <script src="./js/jquery-3.1.1.min.js"></script>
+    <script src="./js/sweetalert2.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <script src="./js/material.min.js"></script>
+    <script src="./js/ripples.min.js"></script>
+    <script src="./js/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="./js/main.js"></script>
+    <script>
+        $.material.init();
+    </script>
+    <script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const archivo = document.getElementById('material_apoyo').files[0];
+        if (archivo && archivo.size > 5 * 1024 * 1024) {
+            e.preventDefault();
+            alert('El archivo no puede superar los 5 MB.');
+        }
+    });
+    </script>
+
+    <script>
+    <?php if (isset($alert_message) && isset($alert_type)): ?>
+        Swal.fire({
+            title: '<?= $alert_title ?>',
+            text: '<?= $alert_message ?>',
+            type: '<?= $alert_type ?>',
+            showConfirmButton: true, // Mostrar el botón de confirmación
+            confirmButtonColor: '#640d14',
+            confirmButtonText: ' Continuar',
+        });
     <?php endif; ?>
-</div>
+    </script>
 
-<script src="../js/bootstrap.js"></script>   
-<script>
-document.querySelector('form').addEventListener('submit', function(e) {
-    const archivo = document.getElementById('material_apoyo').files[0];
-    if (archivo && archivo.size > 5 * 1024 * 1024) {
-        e.preventDefault();
-        alert('El archivo no puede superar los 5 MB.');
-    }
-});
-</script>
 </body>
 </html>
