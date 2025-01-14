@@ -27,7 +27,7 @@ if (!empty($_POST)) {
             } elseif ($tipo === 'profesor') {
                 header("Location: b_profesor/paneldecontrol.php");
             } elseif ($tipo === 'estudiante') {
-                header("Location: b_estudiante/estudiante.php");
+                header("Location: b_estudiante/paneldecontrol.php");
             }
             exit();
         } else {

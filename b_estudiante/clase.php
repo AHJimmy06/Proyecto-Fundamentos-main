@@ -1,17 +1,15 @@
 <?php
+
 include('../php/verificar_acceso.php');
-verificarAcceso('profesor');
+verificarAcceso('estudiante');
 
-// Conexión a la base de datos
 include('../php/cone.php');
-$conn = Conexion(); // Asumiendo que esta función retorna un objeto PDO
-
+$conn = Conexion();
 // Obtener ID del profesor
-$profesorId = $_SESSION['id']; // Suponiendo que el ID del profesor está en la sesión
-$profesorNombre = $_SESSION['nombre'];
+$estudianteId = $_SESSION['id'];
+$estudianteNombre =$_SESSION['nombre'];
 
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -32,7 +30,7 @@ $profesorNombre = $_SESSION['nombre'];
 			<!-- SideBar User info -->
 			<div class="full-box dashboard-sideBar-UserInfo text-center">
                     <h4> ¡Bienvenido!</h4>
-					<h3><?php echo htmlspecialchars($profesorNombre); ?></h3>
+					<h3><?php echo htmlspecialchars($estudianteNombre); ?></h3>
 				<ul class="full-box list-unstyled text-center">
 					<li >
 						<a href="#!" class="btn-exit-system">
@@ -58,10 +56,14 @@ $profesorNombre = $_SESSION['nombre'];
                         <i class="zmdi zmdi-timer zmdi-hc-fw"></i> Tareas 
 					</a>
 				</li>
+				<li>
+					<a href="promedios.php">
+						<i class="zmdi zmdi-font zmdi-hc-fw"></i>Promedios 
+					</a>
+				</li>
 			</ul>
 		</div>
 	</section>
-
 
 	<!-- Content page-->
 	<section class="full-box dashboard-contentPage">
@@ -82,26 +84,19 @@ $profesorNombre = $_SESSION['nombre'];
 		<div class="container-fluid ">
 			<div class="row">
 				<div class="col-xs-12">
-					<ul class="nav nav-tabs bg-red" style="margin-bottom: 15px;">
-					  	<li class="active"><a href="#list" data-toggle="tab">Impartiendo</a></li>
-					  	<li><a href="clasel.php" >Nueva</a></li>
-					</ul>
 					<div class="tab-pane fade active in" id="list">
 						<div class="table-responsive">
 							<table class="table table-hover text-center">
 								<thead>
 									<tr>
-										<th class="text-center">Fecha de la Clase</th>
-										<th class="text-center">Clase</th>
-										<th class="text-center">Materia</th>
 										<th class="text-center">Curso</th>
+										<th class="text-center">Materia</th>
+										<th class="text-center">Clase</th>
+										<th class="text-center">Docente</th>
 										<th class="text-center">Recurso complementario</th>
-                                        <th class="text-center">Tarea Asignada</th>
-										<th class="text-center">Eliminar Clase</th>
-									</tr>
 								</thead>
 								<tbody>
-                                
+                               
 								</tbody>
 							</table>
 						</div>

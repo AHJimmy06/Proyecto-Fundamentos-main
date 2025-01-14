@@ -1,45 +1,13 @@
 <?php
 
 include('../php/verificar_acceso.php');
-verificarAcceso('profesor');
+verificarAcceso('estudiante');
 
 include('../php/cone.php');
 $conn = Conexion();
 // Obtener ID del profesor
-$profesorId = $_SESSION['id'];
-$profesorNombre =$_SESSION['nombre'];
-
-// Obtener el número de cursos que imparte el profesor
-$queryCursos = "SELECT COUNT(*) AS total_cursos FROM cursos WHERE profesor_id = :profesorId";
-$stmtCursos = $conn->prepare($queryCursos);
-$stmtCursos->bindParam(':profesorId', $profesorId, PDO::PARAM_INT);
-$stmtCursos->execute();
-$rowCursos = $stmtCursos->fetch(PDO::FETCH_ASSOC);
-$totalCursos = $rowCursos['total_cursos'];
-
-// Obtener el número de materias que imparte el profesor
-$queryMaterias = "SELECT COUNT(*) AS total_materias FROM materias WHERE curso_id IN (SELECT id FROM cursos WHERE profesor_id = :profesorId)";
-$stmtMaterias = $conn->prepare($queryMaterias);
-$stmtMaterias->bindParam(':profesorId', $profesorId, PDO::PARAM_INT);
-$stmtMaterias->execute();
-$rowMaterias = $stmtMaterias->fetch(PDO::FETCH_ASSOC);
-$totalMaterias = $rowMaterias['total_materias'];
-
-// Obtener el número de clases que imparte el profesor
-$queryClases = "SELECT COUNT(*) AS total_clases FROM clases WHERE materia_id IN (SELECT id FROM materias WHERE curso_id IN (SELECT id FROM cursos WHERE profesor_id = :profesorId))";
-$stmtClases = $conn->prepare($queryClases);
-$stmtClases->bindParam(':profesorId', $profesorId, PDO::PARAM_INT);
-$stmtClases->execute();
-$rowClases = $stmtClases->fetch(PDO::FETCH_ASSOC);
-$totalClases = $rowClases['total_clases'];
-
-// Obtener el número de tareas asignadas por el profesor
-$queryTareas = "SELECT COUNT(*) AS total_tareas FROM tareas WHERE clase_id IN (SELECT id FROM clases WHERE materia_id IN (SELECT id FROM materias WHERE curso_id IN (SELECT id FROM cursos WHERE profesor_id = :profesorId)))";
-$stmtTareas = $conn->prepare($queryTareas);
-$stmtTareas->bindParam(':profesorId', $profesorId, PDO::PARAM_INT);
-$stmtTareas->execute();
-$rowTareas = $stmtTareas->fetch(PDO::FETCH_ASSOC);
-$totalTareas = $rowTareas['total_tareas'];
+$estudianteId = $_SESSION['id'];
+$estudianteNombre =$_SESSION['nombre'];
 
 ?>
 
@@ -63,7 +31,7 @@ $totalTareas = $rowTareas['total_tareas'];
 			<!-- SideBar User info -->
 			<div class="full-box dashboard-sideBar-UserInfo text-center">
                     <h4> ¡Bienvenido!</h4>
-					<h3><?php echo htmlspecialchars($profesorNombre); ?></h3>
+					<h3><?php echo htmlspecialchars($estudianteNombre); ?></h3>
 				<ul class="full-box list-unstyled text-center">
 					<li >
 						<a href="#!" class="btn-exit-system">
@@ -87,6 +55,11 @@ $totalTareas = $rowTareas['total_tareas'];
                 <li>
 					<a href="tarea.php">
                         <i class="zmdi zmdi-timer zmdi-hc-fw"></i> Tareas 
+					</a>
+				</li>
+				<li>
+					<a href="promedios.php">
+						<i class="zmdi zmdi-font zmdi-hc-fw"></i>Promedios 
 					</a>
 				</li>
 			</ul>
@@ -120,8 +93,8 @@ $totalTareas = $rowTareas['total_tareas'];
                     <i class="zmdi zmdi-balance zmdi-hc-fw"></i>
                 </div>
                 <div class="full-box tile-number text-titles">
-                    <p class="full-box"><?php echo $totalCursos; ?></p>
-                    <small>Impartiendo</small>
+                    <p class="full-box"></p>
+                    <small>En Proceso</small>
                 </div>
             </article>
 
@@ -134,8 +107,8 @@ $totalTareas = $rowTareas['total_tareas'];
                     <i class="zmdi zmdi-book zmdi-hc-fw"></i>
                 </div>
                 <div class="full-box tile-number text-titles">
-                    <p class="full-box"><?php echo $totalMaterias; ?></p>
-                    <small>Totales</small>
+                    <p class="full-box"></p>
+                    <small>Inscritas</small>
                 </div>
             </article>
 
@@ -148,8 +121,8 @@ $totalTareas = $rowTareas['total_tareas'];
                     <i class="zmdi zmdi-font zmdi-hc-fw"></i>
                 </div>
                 <div class="full-box tile-number text-titles">
-                    <p class="full-box"><?php echo $totalClases; ?></p>
-                    <small>Impartiendo</small>
+                    <p class="full-box"></p>
+                    <small>Tomando</small>
                 </div>
             </article>
 
@@ -162,8 +135,8 @@ $totalTareas = $rowTareas['total_tareas'];
                     <i class="zmdi zmdi-timer zmdi-hc-fw"></i>
                 </div>
                 <div class="full-box tile-number text-titles">
-                    <p class="full-box"><?php echo $totalTareas; ?></p>
-                    <small>Asignadas</small>
+                    <p class="full-box"></p>
+                    <small>Totales</small>
                 </div>
             </article>
         </div>

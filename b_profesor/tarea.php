@@ -76,28 +76,28 @@ $profesorNombre = $_SESSION['nombre'];
 		<!-- Content page -->
 		<div class="container-fluid">
 			<div class="page-header">
-			  <h1 class="text-titles"><i class="zmdi zmdi-book zmdi-hc-fw"></i> Clases</h1>
+			  <h1 class="text-titles"><i class="zmdi zmdi-timer zmdi-hc-fw"></i> Tareas </h1>
 			</div>
 		</div>
 		<div class="container-fluid ">
 			<div class="row">
 				<div class="col-xs-12">
 					<ul class="nav nav-tabs bg-red" style="margin-bottom: 15px;">
-					  	<li class="active"><a href="#list" data-toggle="tab">Impartiendo</a></li>
-					  	<li><a href="clasel.php" >Nueva</a></li>
+					  	<li class="active"><a href="#list" data-toggle="tab">Asignadas</a></li>
+					  	<li><a href="tarean.php" >Crear</a></li>
+						<li><a href="tareal.php" >Calificar</a></li>
 					</ul>
 					<div class="tab-pane fade active in" id="list">
 						<div class="table-responsive">
 							<table class="table table-hover text-center">
 								<thead>
 									<tr>
-										<th class="text-center">Fecha de la Clase</th>
 										<th class="text-center">Clase</th>
 										<th class="text-center">Materia</th>
 										<th class="text-center">Curso</th>
-										<th class="text-center">Recurso complementario</th>
-                                        <th class="text-center">Tarea Asignada</th>
-										<th class="text-center">Eliminar Clase</th>
+										<th class="text-center">Tarea</th>
+										<th class="text-center">Tarea Asignada</th>
+										<th class="text-center">Fecha de Entrega</th>
 									</tr>
 								</thead>
 								<tbody>
