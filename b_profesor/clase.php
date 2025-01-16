@@ -7,10 +7,112 @@ include('../php/cone.php');
 $conn = Conexion(); // Asumiendo que esta función retorna un objeto PDO
 
 // Obtener ID del profesor
-$profesorId = $_SESSION['id']; // Suponiendo que el ID del profesor está en la sesión
+$profesorId = $_SESSION['id']; // el ID del profesor está en la sesión
 $profesorNombre = $_SESSION['nombre'];
 
+// Obtener las clases impartidas por el profesor
+$sql = "SELECT c.id AS clase_id, 
+       c.fecha, 
+       c.tema, 
+       m.nombre AS materia, 
+       co.nombre AS curso, 
+       ac.ruta_archivo AS recurso_complementario, 
+       t.descripcion AS tarea_descripcion
+FROM clases c
+JOIN materias m ON c.materia_id = m.id
+JOIN cursos co ON m.curso_id = co.id
+LEFT JOIN archivos_clase ac ON ac.clase_id = c.id
+LEFT JOIN tareas t ON t.clase_id = c.id
+WHERE co.profesor_id = :profesorId
+ORDER BY c.fecha DESC";
+
+$stmt = $conn->prepare($sql);
+$stmt->bindParam(':profesorId', $profesorId, PDO::PARAM_INT);
+$stmt->execute();
+
+$clases = $stmt->fetchAll(PDO::FETCH_ASSOC);
+/// Procesar eliminación de clase
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clase_id'])) {
+    $claseId = $_POST['clase_id'];
+
+    try {
+        // Iniciar transacción
+        $conn->beginTransaction();
+
+        // --- Eliminar archivos relacionados a la clase ---
+        // 1. Archivos de la tabla 'archivos_clase'
+        $stmt = $conn->prepare("SELECT ruta_archivo FROM archivos_clase WHERE clase_id = :claseId");
+        $stmt->bindParam(':claseId', $claseId, PDO::PARAM_INT);
+        $stmt->execute();
+        $archivosClase = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($archivosClase as $archivo) {
+            if (file_exists($archivo['ruta_archivo'])) {
+                unlink($archivo['ruta_archivo']); // Eliminar archivo físico
+            }
+        }
+        $stmt = $conn->prepare("DELETE FROM archivos_clase WHERE clase_id = :claseId");
+        $stmt->bindParam(':claseId', $claseId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        // 2. Archivos de la tabla 'archivos_tarea'
+        $stmt = $conn->prepare("SELECT ruta_archivo FROM archivos_tarea WHERE tarea_id IN (SELECT id FROM tareas WHERE clase_id = :claseId)");
+        $stmt->bindParam(':claseId', $claseId, PDO::PARAM_INT);
+        $stmt->execute();
+        $archivosTarea = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($archivosTarea as $archivo) {
+            if (file_exists($archivo['ruta_archivo'])) {
+                unlink($archivo['ruta_archivo']); // Eliminar archivo físico
+            }
+        }
+        $stmt = $conn->prepare("DELETE FROM archivos_tarea WHERE tarea_id IN (SELECT id FROM tareas WHERE clase_id = :claseId)");
+        $stmt->bindParam(':claseId', $claseId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        // 3. Archivos de la tabla 'archivos_estudiante_tarea'
+        $stmt = $conn->prepare("SELECT ruta_archivo FROM archivos_estudiante_tarea WHERE tarea_id IN (SELECT id FROM tareas WHERE clase_id = :claseId)");
+        $stmt->bindParam(':claseId', $claseId, PDO::PARAM_INT);
+        $stmt->execute();
+        $archivosEstudiante = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($archivosEstudiante as $archivo) {
+            if (file_exists($archivo['ruta_archivo'])) {
+                unlink($archivo['ruta_archivo']); // Eliminar archivo físico
+            }
+        }
+        $stmt = $conn->prepare("DELETE FROM archivos_estudiante_tarea WHERE tarea_id IN (SELECT id FROM tareas WHERE clase_id = :claseId)");
+        $stmt->bindParam(':claseId', $claseId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        // --- Eliminar registros relacionados en cascada ---
+        // 4. Eliminar tareas relacionadas a la clase
+        $stmt = $conn->prepare("DELETE FROM tareas WHERE clase_id = :claseId");
+        $stmt->bindParam(':claseId', $claseId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        // 5. Eliminar la clase
+        $stmt = $conn->prepare("DELETE FROM clases WHERE id = :claseId");
+        $stmt->bindParam(':claseId', $claseId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        // Confirmar transacción
+        $conn->commit();
+
+        // Redirigir a la página de clases
+        header('Location: clase.php');
+        exit;
+
+    } catch (Exception $e) {
+        // Revertir la transacción en caso de error
+        $conn->rollBack();
+        echo "Error al eliminar la clase: " . $e->getMessage();
+    }
+} else {
+    echo "Solicitud inválida.";
+}
 ?>
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -101,7 +203,38 @@ $profesorNombre = $_SESSION['nombre'];
 									</tr>
 								</thead>
 								<tbody>
-                                
+								<?php foreach ($clases as $clase): ?>
+									<tr>
+										<td><?php echo date('d/m/Y H:i', strtotime($clase['fecha'])); ?></td>
+										<td><?php echo htmlspecialchars($clase['tema']); ?></td>
+										<td><?php echo htmlspecialchars($clase['materia']); ?></td>
+										<td><?php echo htmlspecialchars($clase['curso']); ?></td>
+										
+										<td>
+											<?php if ($clase['recurso_complementario']): ?>
+												<a href="../clases/<?php echo htmlspecialchars($clase['recurso_complementario']); ?>" target="_blank">
+													Ver Recurso
+												</a>
+											<?php else: ?>
+												No disponible
+											<?php endif; ?>
+										</td>
+										<td>
+											<?php if ($clase['tarea_descripcion']): ?>
+												<?php echo htmlspecialchars($clase['tarea_descripcion']); ?>
+											<?php else: ?>
+												No asignada
+											<?php endif; ?>
+										</td>
+										<td> 
+											 <!-- Formulario de eliminación -->
+											 <form id="form-eliminar-<?php echo $clase['clase_id']; ?>" action="clase.php" method="POST" style="display: none;">
+												<input type="hidden" name="clase_id" value="<?php echo $clase['clase_id']; ?>">
+											</form>
+											<button class="btn btn-danger btn-ddbe" data-id="<?php echo $clase['clase_id']; ?>">Eliminar</button>
+										</td>
+									</tr>
+								<?php endforeach; ?>
 								</tbody>
 							</table>
 						</div>
