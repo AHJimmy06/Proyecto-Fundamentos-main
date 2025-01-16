@@ -5,9 +5,42 @@ verificarAcceso('estudiante');
 
 include('../php/cone.php');
 $conn = Conexion();
-// Obtener ID del profesor
-$estudianteId = $_SESSION['id'];
+// Obtener ID del usuario
+$usuarioId = $_SESSION['id'];
 $estudianteNombre =$_SESSION['nombre'];
+
+// Obtener el estudiante_id relacionado con el usuario
+$sql_estudiante = "SELECT e.id AS estudiante_id 
+                   FROM estudiantes e
+                   WHERE e.usuario_id = :usuarioId";
+$stmt_estudiante = $conn->prepare($sql_estudiante);
+$stmt_estudiante->execute(['usuarioId' => $usuarioId]);
+$estudiante = $stmt_estudiante->fetch(PDO::FETCH_ASSOC);
+
+$estudianteId = $estudiante['estudiante_id'];
+
+$sql_tareas_entregadas = "
+    SELECT 
+        c.nombre AS curso_nombre,
+        t.descripcion AS tarea_descripcion,
+        et.estado AS tarea_estado,
+        t.fecha_entrega AS tarea_fecha_entrega,  -- Fecha de entrega de la tarea
+        aet.fecha_subida AS tarea_fecha_subida,  -- Fecha de subida desde la tabla 'archivos_estudiante_tarea'
+        cal.calificacion AS calificacion,
+        cal.comentarios AS comentarios
+    FROM 
+        estudiantes_tareas et
+    JOIN tareas t ON et.tarea_id = t.id
+    JOIN clases cl ON t.clase_id = cl.id
+    JOIN materias m ON cl.materia_id = m.id
+    JOIN cursos c ON m.curso_id = c.id
+    LEFT JOIN calificaciones cal ON t.id = cal.tarea_id AND et.estudiante_id = cal.estudiante_id
+    LEFT JOIN archivos_estudiante_tarea aet ON et.estudiante_id = aet.estudiante_id AND et.tarea_id = aet.tarea_id
+    WHERE et.estudiante_id = :estudianteId AND et.estado = 'entregada'
+";
+$stmt_tareas_entregadas = $conn->prepare($sql_tareas_entregadas);
+$stmt_tareas_entregadas->execute(['estudianteId' => $estudianteId]);
+$tareas_entregadas = $stmt_tareas_entregadas->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 <!DOCTYPE html>
@@ -103,8 +136,18 @@ $estudianteNombre =$_SESSION['nombre'];
 									</tr>
 								</thead>
 								<tbody>
-                               
+								<?php foreach ($tareas_entregadas as $tarea): ?>
+									<tr>
+										<td class="text-center"><?php echo htmlspecialchars($tarea['curso_nombre']); ?></td>
+										<td class="text-center"><?php echo htmlspecialchars($tarea['tarea_descripcion']); ?></td>
+										<td class="text-center"><?php echo htmlspecialchars($tarea['tarea_fecha_subida']); ?></td>
+										<td class="text-center"><?php echo htmlspecialchars($tarea['tarea_fecha_entrega']); ?></td>
+										<td class="text-center"><?php echo htmlspecialchars($tarea['calificacion']); ?></td>
+										<td class="text-center"><?php echo htmlspecialchars($tarea['comentarios']); ?></td>
+									</tr>
+								<?php endforeach; ?>
 								</tbody>
+
 							</table>
 						</div>
 					</div>

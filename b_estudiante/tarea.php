@@ -5,9 +5,77 @@ verificarAcceso('estudiante');
 
 include('../php/cone.php');
 $conn = Conexion();
-// Obtener ID del profesor
-$estudianteId = $_SESSION['id'];
+// Obtener ID del usuario
+$usuarioId = $_SESSION['id'];
 $estudianteNombre =$_SESSION['nombre'];
+
+// Obtener el estudiante_id relacionado con el usuario
+$sql_estudiante = "SELECT e.id AS estudiante_id 
+                   FROM estudiantes e
+                   WHERE e.usuario_id = :usuarioId";
+$stmt_estudiante = $conn->prepare($sql_estudiante);
+$stmt_estudiante->execute(['usuarioId' => $usuarioId]);
+$estudiante = $stmt_estudiante->fetch(PDO::FETCH_ASSOC);
+
+$estudianteId = $estudiante['estudiante_id'];
+
+// Obtener las tareas pendientes para el estudiante
+$sql_tareas = "SELECT t.id AS tarea_id, t.descripcion, t.fecha_entrega, c.nombre AS curso_nombre, m.nombre AS materia_nombre, cl.tema
+               FROM tareas t
+               JOIN clases cl ON t.clase_id = cl.id
+               JOIN materias m ON cl.materia_id = m.id
+               JOIN cursos c ON m.curso_id = c.id
+               LEFT JOIN estudiantes_tareas et ON t.id = et.tarea_id AND et.estudiante_id = :estudianteId
+               WHERE et.id IS NULL AND t.fecha_entrega >= CURDATE()"; // Solo tareas pendientes
+$stmt_tareas = $conn->prepare($sql_tareas);
+$stmt_tareas->execute(['estudianteId' => $estudianteId]);
+$tareas = $stmt_tareas->fetchAll(PDO::FETCH_ASSOC);
+
+
+// Procesar la entrega de la tarea cuando se suba un archivo
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (isset($_FILES['archivo']) && $_FILES['archivo']['error'] == 0) {
+        // Obtener información del archivo
+        $archivoTmpName = $_FILES['archivo']['tmp_name'];
+        $archivoNombre = $_FILES['archivo']['name'];
+        $archivoTipo = $_FILES['archivo']['type'];
+        $archivoRuta = 'uploads/' . $archivoNombre; // Ruta donde se guardará el archivo
+
+        // Validación del tipo de archivo (opcional)
+        $allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+        if (!in_array($archivoTipo, $allowedTypes)) {
+            echo 'El archivo debe ser PDF, DOC, DOCX o TXT.';
+            exit();
+        }
+
+        // Mover el archivo a la carpeta de destino
+        if (move_uploaded_file($archivoTmpName, $archivoRuta)) {
+            // Insertar información del archivo en la base de datos
+            $sql_insertar_archivo = "INSERT INTO archivos_estudiante_tarea (nombre_archivo, tipo_archivo, ruta_archivo, estudiante_id, tarea_id) 
+                                     VALUES (:nombre_archivo, :tipo_archivo, :ruta_archivo, :estudiante_id, :tarea_id)";
+            $stmt = $conn->prepare($sql_insertar_archivo);
+            $stmt->execute([
+                'nombre_archivo' => $archivoNombre,
+                'tipo_archivo' => $archivoTipo,
+                'ruta_archivo' => $archivoRuta,
+                'estudiante_id' => $estudianteId,
+                'tarea_id' => $_POST['tarea_id']
+            ]);
+
+            // Marcar la tarea como entregada
+            $sql_actualizar_estado = "UPDATE estudiantes_tareas SET estado = 'entregada' WHERE tarea_id = :tarea_id AND estudiante_id = :estudiante_id";
+            $stmt = $conn->prepare($sql_actualizar_estado);
+            $stmt->execute(['tarea_id' => $_POST['tarea_id'], 'estudiante_id' => $estudianteId]);
+
+            echo 'Tarea entregada correctamente.';
+        } else {
+            echo 'Hubo un problema al mover el archivo. Intenta nuevamente.';
+        }
+    } else {
+        echo 'No se ha subido ningún archivo o ocurrió un error.';
+    }
+}
+
 
 ?>
 <!DOCTYPE html>
@@ -90,6 +158,16 @@ $estudianteNombre =$_SESSION['nombre'];
 						<li><a href="tarea_a.php" >Tareas Atrasadas</a></li>
 					</ul>
 					<div class="tab-pane fade active in" id="list">
+					<!-- Formulario de entrega de tarea (oculto inicialmente) -->
+					<div id="form-container" style="display:none;">
+						<form action="tarea.php" method="POST" enctype="multipart/form-data">
+							<input type="hidden" name="tarea_id" id="tareaId">
+							<label for="archivo">Selecciona el archivo de la tarea:</label>
+							<input type="file" name="archivo" id="archivo" required>
+							<button type="submit">Entregar Tarea</button>
+						</form>
+					</div>
+
 						<div class="table-responsive">
 							<table class="table table-hover text-center">
 								<thead>
@@ -102,7 +180,20 @@ $estudianteNombre =$_SESSION['nombre'];
 									</tr>
 								</thead>
 								<tbody>
-                               
+								<?php foreach ($tareas as $tarea): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($tarea['descripcion']); ?></td>
+                                        <td><?php echo htmlspecialchars($tarea['fecha_entrega']); ?></td>
+                                        <td><?php echo htmlspecialchars($tarea['curso_nombre']); ?></td>
+                                        <td><?php echo htmlspecialchars($tarea['materia_nombre']) . " - " . htmlspecialchars($tarea['tema']); ?></td>
+                                       <!-- Asegúrate de mostrar la lista de tareas pendientes como antes -->
+										<td>
+											<!-- Botón para entregar -->
+											<button class="btn btn-primary btn-ddbe" data-id="<?php echo $tarea['tarea_id']; ?>">Entregar</button>
+										</td>
+
+                                    </tr>
+                                    <?php endforeach; ?>
 								</tbody>
 							</table>
 						</div>
@@ -123,27 +214,36 @@ $estudianteNombre =$_SESSION['nombre'];
     <script>
         $.material.init();
     </script>
-    <script>
-        $(document).ready(function(){
-            $('.btn-ddbe').on('click', function(){
-                var claseId = $(this).data('id');
-                var form = $('#form-eliminar-' + claseId); // Encontramos el formulario correspondiente
+   <script>
+    $(document).ready(function(){
+        // Al hacer clic en "Entregar"
+        $('.btn-ddbe').on('click', function(){
+            var tareaId = $(this).data('id');  // Obtener el ID de la tarea
 
-                swal({
-                    title: '¿Seguro que desea eliminar esta clase?',
-                    text: 'Esta acción eliminará la clase y todos sus registros asociados, incluyendo archivos y tareas.',
-                    type: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#640d14',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Confirmar',
-                    cancelButtonText: 'Cancelar'
-                }).then(function () {
-                    form.submit(); // Enviamos el formulario si el usuario confirma
-                });
+            swal({
+                title: '¿Seguro que deseas entregar esta tarea?',
+                text: 'Después de confirmar, podrás subir el archivo de la tarea.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#640d14',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Confirmar',
+                cancelButtonText: 'Cancelar'
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    // Mostrar el formulario de entrega de tarea
+                    $('#form-container').show();   // Mostrar el formulario
+                    $('#tareaId').val(tareaId);    // Establecer el ID de la tarea en el formulario
+
+                    // Opcional: Cambiar el texto del botón o deshabilitarlo
+                    $('.btn-ddbe').prop('disabled', true);  // Desactivar el botón de entrega para evitar múltiples clics
+                    $(this).text('Tarea entregada').prop('disabled', true);  // Cambiar el texto del botón
+                }
             });
         });
-    </script>
+    });
+</script>
+
 
 </body>
 </html>

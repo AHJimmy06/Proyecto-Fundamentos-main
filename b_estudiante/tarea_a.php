@@ -5,10 +5,36 @@ verificarAcceso('estudiante');
 
 include('../php/cone.php');
 $conn = Conexion();
-// Obtener ID del profesor
-$estudianteId = $_SESSION['id'];
+// Obtener ID del usuario
+$usuarioId = $_SESSION['id'];
 $estudianteNombre =$_SESSION['nombre'];
 
+// Obtener el estudiante_id relacionado con el usuario
+$sql_estudiante = "SELECT e.id AS estudiante_id 
+                   FROM estudiantes e
+                   WHERE e.usuario_id = :usuarioId";
+$stmt_estudiante = $conn->prepare($sql_estudiante);
+$stmt_estudiante->execute(['usuarioId' => $usuarioId]);
+$estudiante = $stmt_estudiante->fetch(PDO::FETCH_ASSOC);
+
+$estudianteId = $estudiante['estudiante_id'];
+
+// Obtener tareas atrasadas para el estudiante
+$sql_tareas_atrasadas = "
+    SELECT c.nombre AS curso, t.descripcion AS tarea, t.fecha_entrega, c.nombre AS calificacion
+    FROM tareas t
+    JOIN clases cl ON t.clase_id = cl.id
+    JOIN materias m ON cl.materia_id = m.id
+    JOIN cursos c ON m.curso_id = c.id
+    JOIN estudiantes_tareas et ON t.id = et.tarea_id
+    JOIN estudiantes e ON et.estudiante_id = e.id
+    WHERE et.estado = 'atrasada'
+    AND e.id = :estudianteId
+    AND t.fecha_entrega < CURDATE()"; // Filtramos las tareas que ya están atrasadas
+
+$stmt_tareas_atrasadas = $conn->prepare($sql_tareas_atrasadas);
+$stmt_tareas_atrasadas->execute(['estudianteId' => $estudianteId]);
+$tareas_atrasadas = $stmt_tareas_atrasadas->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -101,7 +127,19 @@ $estudianteNombre =$_SESSION['nombre'];
 									</tr>
 								</thead>
 								<tbody>
-                               
+								<?php foreach ($tareas_atrasadas as $tarea): ?>
+								<tr>
+									<td><?php echo htmlspecialchars($tarea['curso']); ?></td>
+									<td><?php echo htmlspecialchars($tarea['tarea']); ?></td>
+									<td><?php echo htmlspecialchars($tarea['fecha_entrega']); ?></td>
+									<td>
+										<?php
+											// Verifica si ya tiene una calificación asignada
+											echo $tarea['calificacion'] ? htmlspecialchars($tarea['calificacion']) : 'Pendiente';
+										?>
+									</td>
+								</tr>
+								<?php endforeach; ?>
 								</tbody>
 							</table>
 						</div>
