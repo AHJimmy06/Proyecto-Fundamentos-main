@@ -1,15 +1,55 @@
 <?php
-
 include('../php/verificar_acceso.php');
 verificarAcceso('estudiante');
 
 include('../php/cone.php');
-$conn = Conexion();
-// Obtener ID del profesor
-$estudianteId = $_SESSION['id'];
+$conn = Conexion(); //Conexion por PDO
+// Obtener ID del estudiante
+$usuarioId = $_SESSION['id'];
+
 $estudianteNombre =$_SESSION['nombre'];
 
+$sql = "SELECT e.id
+        FROM estudiantes e
+        WHERE e.usuario_id = :id_usuario";
+
+$stmt = $conn->prepare($sql);
+    
+// Vincular el parámetro
+$stmt->bindParam(':id_usuario', $usuarioId, PDO::PARAM_INT);
+
+// Ejecutar la consulta
+$stmt->execute();
+$estudiante = $stmt->fetch(PDO::FETCH_ASSOC);
+$estudiante_id = $estudiante['id'];
+
+
+$query = "
+    SELECT c.nombre AS curso, m.nombre AS materia, cl.tema AS tema, u.nombre AS docente, ac.nombre_archivo, ac.tipo_archivo, ac.ruta_archivo
+    FROM inscripciones i
+    JOIN materias m ON i.materia_id = m.id
+    JOIN cursos c ON m.curso_id = c.id
+    JOIN clases cl ON m.id = cl.materia_id
+    JOIN usuarios u ON c.profesor_id = u.id
+    LEFT JOIN archivos_clase ac ON cl.id = ac.clase_id
+    WHERE i.estudiante_id = :estudiante_id
+    ORDER BY cl.tema DESC
+";
+
+// Preparar la consulta
+$stmt = $conn->prepare($query);
+
+// Vincular el parámetro :estudiante_id con el valor correspondiente
+$stmt->bindParam(':estudiante_id', $estudiante_id, PDO::PARAM_INT);
+
+// Ejecutar la consulta
+$stmt->execute();
+
+// Obtener los resultados
+$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -91,12 +131,28 @@ $estudianteNombre =$_SESSION['nombre'];
 									<tr>
 										<th class="text-center">Curso</th>
 										<th class="text-center">Materia</th>
-										<th class="text-center">Clase</th>
+										<th class="text-center">Tema</th>
 										<th class="text-center">Docente</th>
 										<th class="text-center">Recurso complementario</th>
 								</thead>
 								<tbody>
-                               
+								<?php foreach ($result as $row): ?>
+            <tr>
+                <td><?php echo htmlspecialchars($row['curso']); ?></td>
+                <td><?php echo htmlspecialchars($row['materia']); ?></td>
+                <td><?php echo htmlspecialchars($row['tema']); ?></td>
+                <td><?php echo htmlspecialchars($row['docente']); ?></td>
+                <td>
+                    <?php if ($row['nombre_archivo']): ?>
+                        <a href="<?php echo htmlspecialchars($row['ruta_archivo']); ?>" target="_blank">
+                            <?php echo htmlspecialchars($row['nombre_archivo']); ?> (<?php echo htmlspecialchars($row['tipo_archivo']); ?>)
+                        </a>
+                    <?php else: ?>
+                        No disponible
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
 								</tbody>
 							</table>
 						</div>
@@ -117,27 +173,5 @@ $estudianteNombre =$_SESSION['nombre'];
     <script>
         $.material.init();
     </script>
-    <script>
-        $(document).ready(function(){
-            $('.btn-ddbe').on('click', function(){
-                var claseId = $(this).data('id');
-                var form = $('#form-eliminar-' + claseId); // Encontramos el formulario correspondiente
-
-                swal({
-                    title: '¿Seguro que desea eliminar esta clase?',
-                    text: 'Esta acción eliminará la clase y todos sus registros asociados, incluyendo archivos y tareas.',
-                    type: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#640d14',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Confirmar',
-                    cancelButtonText: 'Cancelar'
-                }).then(function () {
-                    form.submit(); // Enviamos el formulario si el usuario confirma
-                });
-            });
-        });
-    </script>
-
 </body>
 </html>
