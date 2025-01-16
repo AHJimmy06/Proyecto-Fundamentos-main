@@ -5,9 +5,109 @@ include('../php/verificar_acceso.php');
 
 include('../php/cone.php');
 
+$conn = Conexion();
 $profesorId = $_SESSION['id']; // Suponiendo que el ID del profesor está en la sesión
 $profesorNombre = $_SESSION['nombre'];
 
+// Consultar las clases asociadas a las materias del profesor
+$query = "
+    SELECT c.id, m.nombre AS materia, c.tema 
+    FROM clases c
+    JOIN materias m ON c.materia_id = m.id
+    JOIN cursos cu ON m.curso_id = cu.id
+    WHERE cu.profesor_id = :profesorId
+";
+$stmt = $conn->prepare($query);
+$stmt->execute(['profesorId' => $profesorId]);
+
+$clases = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+// Lógica para procesar el formulario
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
+    $claseId = $_POST['clase_id'];
+    $descripcion = $_POST['descripcion'];
+    $fechaEntrega = $_POST['fecha_entrega'];
+    $archivo = $_FILES['archivo_complementario'];
+
+    // Validar que todos los campos estén completos
+    if (!empty($claseId) && !empty($descripcion) && !empty($fechaEntrega)) {
+        
+        // Validar archivo
+        $allowedFileType = 'application/pdf';
+        $maxFileSize = 5 * 1024 * 1024; // 5MB
+        if ($archivo['error'] == 0) {
+            $fileType = mime_content_type($archivo['tmp_name']);
+            if ($fileType != $allowedFileType) {
+                echo "<script>alert('Solo se permite archivo PDF.');</script>";
+            } elseif ($archivo['size'] > $maxFileSize) {
+                echo "<script>alert('El archivo excede el tamaño máximo permitido de 5MB.');</script>";
+            } else {
+                // Subir archivo
+                $fileName = uniqid() . '-' . $archivo['name'];
+                $uploadDir = '../uploads/tareasp/';
+                $uploadFile = $uploadDir . $fileName;
+
+                if (move_uploaded_file($archivo['tmp_name'], $uploadFile)) {
+                    // Insertar tarea en la base de datos
+                    $query = "
+                        INSERT INTO tareas (clase_id, descripcion, fecha_entrega)
+                        VALUES (:clase_id, :descripcion, :fecha_entrega)
+                    ";
+                    $stmt = $conn->prepare($query);
+                    $stmt->execute([
+                        'clase_id' => $claseId,
+                        'descripcion' => $descripcion,
+                        'fecha_entrega' => $fechaEntrega
+                    ]);
+
+                    // Obtener el ID de la tarea insertada
+                    $tareaId = $conn->lastInsertId();
+
+                    // Guardar el archivo en la base de datos
+                    $query = "
+                        INSERT INTO archivos_tarea (nombre_archivo, tipo_archivo, ruta_archivo, tarea_id, usuario_id)
+                        VALUES (:nombre_archivo, :tipo_archivo, :ruta_archivo, :tarea_id, :usuario_id)
+                    ";
+                    $stmt = $conn->prepare($query);
+                    $stmt->execute([
+                        'nombre_archivo' => $fileName,
+                        'tipo_archivo' => $allowedFileType,
+                        'ruta_archivo' => $uploadFile,
+                        'tarea_id' => $tareaId,
+                        'usuario_id' => $profesorId
+                    ]);
+
+                    $alert_message = "La tarea se ha creado exitosamente.";
+					$alert_type = "success"; // Puedes usar "error" si es el caso contrario
+					$alert_title = "Éxito";
+
+                } else {
+                    echo "<script>alert('Error al subir el archivo.');</script>";
+                }
+            }
+        } else {
+            // Insertar tarea sin archivo
+            $query = "
+                INSERT INTO tareas (clase_id, descripcion, fecha_entrega)
+                VALUES (:clase_id, :descripcion, :fecha_entrega)
+            ";
+            $stmt = $conn->prepare($query);
+            $stmt->execute([
+                'clase_id' => $claseId,
+                'descripcion' => $descripcion,
+                'fecha_entrega' => $fechaEntrega
+            ]);
+
+            // Mensaje de éxito sin archivo
+            $alert_message = "La tarea se ha creado exitosamente.";
+			$alert_type = "success"; // Puedes usar "error" si es el caso contrario
+			$alert_title = "Éxito";
+        }
+    } else {
+        echo "<script>alert('Por favor complete todos los campos obligatorios.');</script>";
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -88,16 +188,18 @@ $profesorNombre = $_SESSION['nombre'];
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-xs-12 col-md-10 col-md-offset-1">
-                                <form action="/crear_tarea" method="POST" enctype="multipart/form-data">
+                                <form action="" method="POST" enctype="multipart/form-data" id="formcurso">
                                     <div class="form-group">
                                     <!-- Selección de la clase -->
                                     <label class="control-label"for="clase_id">Seleccionar clase:</label>
-                                    <select class="form-control"id="clase_id" name="clase_id" required>
-                                        <option value="">-- Seleccione una clase --</option>
-                                            <!-- Aquí se generan dinámicamente las opciones desde la tabla clases -->
-                                            <option value="1">Clase 1 - Tema: Introducción</option>
-                                            <option value="2">Clase 2 - Tema: Conceptos Básicos</option>
-                                    </select>
+                                    <select class="form-control" id="clase_id" name="clase_id" required>
+										<option value="">-- Seleccione una clase --</option>
+										<?php foreach ($clases as $clase): ?>
+											<option value="<?php echo htmlspecialchars($clase['id']); ?>">
+												<?php echo htmlspecialchars($clase['materia']) . " - Tema: " . htmlspecialchars($clase['tema']); ?>
+											</option>
+										<?php endforeach; ?>
+									</select>
                                     </div>
                                     <div class="form-group label-floating">
                                         <!-- Descripción de la tarea -->
@@ -110,14 +212,15 @@ $profesorNombre = $_SESSION['nombre'];
                                         <input class="form-control" type="date" id="fecha_entrega" name="fecha_entrega" required>
                                     </div>
                                     <div class="form-group">
-                                        <!-- Archivos adjuntos -->
-                                        <label for="archivos">Adjuntar archivo (opcional):</label>
-                                        <input type="file" id="archivos" name="archivos[]" multiple>
-                                    </div>
-                                    <p class="text-center">
-                                        <!-- Botón de envío -->
-                                        <button class="btn btn-info btn-raised btn-sm" type="submit">Crear tarea</button>
-                                    </p>
+										      <label class="control-label">Archivo Complementario ||  Solo se permite un archivo pdf de máximo 5MB</label>
+										      <div>
+										        <input type="text" readonly="" class="form-control" placeholder="Buscar...">
+										        <input type="file" name="archivo_complementario">
+										      </div>
+										</div>
+										<p class="text-center" >
+										<button id="form-btn" name="registrar" type="submit" class="btn btn-info btn-raised btn-sm" disabled><i class="zmdi zmdi-floppy"></i> Crear</button>
+									</p>
                                 </form>
 
                                     <div><a class="btn-form">Formato de registro</a></div>
@@ -142,24 +245,76 @@ $profesorNombre = $_SESSION['nombre'];
 		$.material.init();
 	</script>
 	<script>
-    	// Selecciona el formulario y el botón
-    const form = document.getElementById('formestudiante');
-	const cedula = document.getElementById('cedula');
-	const nombre = document.getElementById('nombre');
-    const submitButton = document.getElementById('formbtn');
+   // Validar tamaño del archivo y tipo antes de enviar el formulario
+        document.getElementById('formcurso').addEventListener('submit', function (e) {
+            const archivo = document.querySelector('input[type="file"]'); // Input del archivo
+            const maxFileSize = 5 * 1024 * 1024; // Tamaño máximo en bytes (5MB)
+            const allowedFileType = 'application/pdf'; // Tipo de archivo permitido (PDF)
 
-    	// Escucha los eventos de entrada (input) en el formulario
-    form.addEventListener('input', () => {
-		const hasTenDigits = cedula.value.length === 10;
-        // Verifica si el nombre tiene más de dos palabras (separadas por espacios)
-    	const hasValidName = nombre.value.trim().split(/\s+/).length > 2;
-		// Verifica si todos los campos requeridos están llenos y válidos
-        const isValid = form.checkValidity() && hasTenDigits && hasValidName;
-		
-        submitButton.disabled = !isValid; // Habilita o deshabilita el botón
-    });
-</script>
-<script>
+            // Validar si se seleccionó un archivo
+            if (archivo.files.length > 0) {
+                const file = archivo.files[0];
+
+                // Validar si el archivo es un PDF
+                if (file.type !== allowedFileType) {
+                    e.preventDefault(); // Evitar el envío del formulario
+
+                    // Mostrar alerta con SweetAlert
+                    swal({
+                        title: 'Tipo de archivo no válido',
+                        html: 'Por favor, seleccione un archivo en formato PDF.',
+                        type: 'error',
+                        showConfirmButton: true,
+                        confirmButtonColor: '#d33',
+                        confirmButtonText: 'Entendido',
+                    });
+
+                    return false; // Terminar ejecución si el archivo no es un PDF
+                }
+
+                // Validar si el tamaño del archivo supera el máximo
+                if (file.size > maxFileSize) {
+                    e.preventDefault(); // Evitar el envío del formulario
+
+                    // Mostrar alerta con SweetAlert
+                    swal({
+                        title: 'Archivo demasiado grande',
+                        html: 'El archivo seleccionado no debe superar los 5 MB. Por favor, seleccione un archivo más pequeño.',
+                        type: 'error',
+                        showConfirmButton: true,
+                        confirmButtonColor: '#d33',
+                        confirmButtonText: 'Entendido',
+                    });
+
+                    return false; // Terminar ejecución si el archivo supera el tamaño
+                }
+            }
+        });
+		// Validar habilitación del botón de envío basado en los campos del formulario
+	const form = document.getElementById('formcurso');
+	const claseSelect = document.getElementById('clase_id');
+	const descripcionInput = document.getElementById('descripcion');
+	const fechaEntregaInput = document.getElementById('fecha_entrega');
+	const submitButton = document.getElementById('form-btn');
+
+	form.addEventListener('input', () => {
+		// Verificar que todos los campos obligatorios estén llenos
+		const isClaseSelected = claseSelect.value.trim() !== "";
+		const isDescripcionValid = descripcionInput.value.trim().length > 0;
+
+		// Obtener la fecha actual y la fecha de entrega
+		const currentDate = new Date().toISOString().split('T')[0]; // Fecha actual en formato YYYY-MM-DD
+		const fechaEntrega = fechaEntregaInput.value;
+
+		// Verificar si la fecha de entrega es igual o mayor a la actual
+		const isFechaValida = fechaEntrega >= currentDate;
+
+		// Habilitar o deshabilitar el botón basado en las validaciones
+		submitButton.disabled = !(isClaseSelected && isDescripcionValid && isFechaValida);
+	});
+
+	</script>
+	<script>
 	<?php if (isset($alert_message) && isset($alert_type)): ?>
 
         swal({  // Tipo de alerta (success, error)

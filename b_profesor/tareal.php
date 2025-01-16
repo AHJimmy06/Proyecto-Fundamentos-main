@@ -10,7 +10,53 @@ $conn = Conexion(); // Asumiendo que esta función retorna un objeto PDO
 $profesorId = $_SESSION['id']; // Suponiendo que el ID del profesor está en la sesión
 $profesorNombre = $_SESSION['nombre'];
 
+// Obtener las clases con tareas asociadas
+$sql = "
+    SELECT DISTINCT cl.id, cl.tema, m.nombre AS materia
+    FROM clases cl
+    JOIN materias m ON m.id = cl.materia_id
+    JOIN cursos c ON c.id = m.curso_id
+    WHERE c.profesor_id = :profesorId
+    ORDER BY m.nombre, cl.tema
+";
+
+$stmt = $conn->prepare($sql);
+$stmt->execute([':profesorId' => $profesorId]);
+$clases = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
+<?php
+// Verifica si se ha seleccionado una clase
+$tareas = []; // Inicializamos la variable para evitar errores en el primer cargado de la página
+
+if (isset($_GET['clase_id']) && !empty($_GET['clase_id'])) {
+    // Obtener el ID de la clase seleccionada
+    $claseId = $_GET['clase_id'];
+
+    // Consulta para obtener las tareas y los estudiantes que las han entregado
+    $sql = "
+        SELECT t.id AS tarea_id, t.descripcion AS tarea_descripcion, t.fecha_entrega, 
+               e.id AS estudiante_id, e.matricula, u.nombre AS estudiante_nombre, 
+               st.estado, c.tema AS clase_tema
+        FROM tareas t
+        JOIN clases c ON c.id = t.clase_id
+        JOIN estudiantes_tareas st ON st.tarea_id = t.id
+        JOIN estudiantes e ON e.id = st.estudiante_id
+        JOIN usuarios u ON u.id = e.usuario_id  -- Unimos con la tabla usuarios para obtener el nombre del estudiante
+        WHERE t.clase_id = :claseId
+        ORDER BY u.nombre, t.fecha_entrega  -- Ahora ordenamos por el nombre del estudiante (columna u.nombre)
+    ";
+
+    // Preparar la consulta
+    $stmt = $conn->prepare($sql);
+    $stmt->execute([':claseId' => $claseId]);
+
+    // Obtener los resultados
+    $tareas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+?>
+
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -88,21 +134,62 @@ $profesorNombre = $_SESSION['nombre'];
                         <li class="active"><a href="#list" data-toggle="tab">Calificar</a></li>
 					</ul>
 					<div class="tab-pane fade active in" id="list">
+					<div class="form-group">
+					<!-- Formulario de selección de clase -->
+					<form action="tareal.php" method="GET">
+						<div class="form-group">
+							<label class="control-label" for="clase_id">Seleccionar clase:</label>
+							<select class="form-control" id="clase_id" name="clase_id" required>
+								<option value="">-- Seleccione una clase --</option>
+								<?php foreach ($clases as $clase): ?>
+									<option value="<?php echo htmlspecialchars($clase['id']); ?>"
+										<?php echo (isset($_GET['clase_id']) && $_GET['clase_id'] == $clase['id']) ? 'selected' : ''; ?>>
+										<?php echo htmlspecialchars($clase['materia']) . " - Tema: " . htmlspecialchars($clase['tema']); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+						<button type="submit" class="btn btn-primary">Buscar tareas</button>
+								</form>
+                        </div>
+                    </div>
 						<div class="table-responsive">
-							<table class="table table-hover text-center">
-								<thead>
-									<tr>
-										<th class="text-center">Tarea</th>
-										<th class="text-center">Clase</th>
-										<th class="text-center">Estudiante</th>
-										<th class="text-center">Entrega</th>
-                                        <th class="text-center">Calificar</th>
-									</tr>
-								</thead>
-								<tbody>
-                                
-								</tbody>
-							</table>
+						<table class="table table-hover text-center">
+    <thead>
+        <tr>
+            <th class="text-center">Tarea</th>
+            <th class="text-center">Clase</th>
+            <th class="text-center">Estudiante</th>
+            <th class="text-center">Entrega</th>
+            <th class="text-center">Calificar</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php if (!empty($tareas)): ?>
+            <?php foreach ($tareas as $tarea): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($tarea['tarea_descripcion']); ?></td>
+                    <td><?php echo htmlspecialchars($tarea['clase_tema']); ?></td>
+                    <td><?php echo htmlspecialchars($tarea['estudiante_nombre']); ?></td>
+                    <td><?php echo htmlspecialchars($tarea['fecha_entrega']); ?></td>
+                    <td>
+                        <?php if ($tarea['estado'] == 'entregada'): ?>
+                            <a href="calificar_tarea.php?tarea_id=<?php echo $tarea['tarea_id']; ?>&estudiante_id=<?php echo $tarea['estudiante_id']; ?>" class="btn btn-success">Calificar</a>
+                        <?php else: ?>
+                            <span class="text-danger">Tarea Atrasada</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        <?php elseif (isset($_GET['clase_id'])): ?>
+            <tr>
+                <td colspan="5">No hay tareas enviadas para esta clase.</td>
+            </tr>
+        <?php endif; ?>
+    </tbody>
+</table>
+
+
 						</div>
 					</div>
 				
