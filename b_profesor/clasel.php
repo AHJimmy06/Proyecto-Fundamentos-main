@@ -20,105 +20,84 @@ $stmt->bindParam(':profesor_id', $profesorId, PDO::PARAM_INT);
 $stmt->execute();
 $materias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Verificar si se ha enviado el formulario
+// Verificar si el formulario fue enviado
 if (isset($_POST['registrar'])) {
-    // Recoger los datos del formulario
+    // Obtener datos del formulario
     $materiaId = $_POST['materias'];
-    $temaClase = $_POST['tema'];
-    $archivoRuta = null;
+    $tema = $_POST['tema'];
+    $fecha = date('Y-m-d H:i:s'); // Fecha y hora actual
 
-    // Validar los campos obligatorios
-    if ($materiaId && $temaClase) {
-        // Verificar si el tema ya existe para la materia seleccionada
-        $queryVerificar = "SELECT COUNT(*) FROM clases WHERE materia_id = :materia_id AND tema = :tema";
-        $stmtVerificar = $conn->prepare($queryVerificar);
-        $stmtVerificar->bindParam(':materia_id', $materiaId, PDO::PARAM_INT);
-        $stmtVerificar->bindParam(':tema', $temaClase, PDO::PARAM_STR);
-        $stmtVerificar->execute();
-        $existeTema = $stmtVerificar->fetchColumn();
+    // Verificar si ya existe una clase con la misma materia, tema y fecha
+    $query = "SELECT * FROM clases WHERE materia_id = :materia_id AND tema = :tema AND fecha = :fecha";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':materia_id', $materiaId, PDO::PARAM_INT);
+    $stmt->bindParam(':tema', $tema, PDO::PARAM_STR);
+    $stmt->bindParam(':fecha', $fecha, PDO::PARAM_STR);
+    $stmt->execute();
 
-        if ($existeTema > 0) {
-            // Si el tema ya existe, mostrar una alerta y detener el proceso
-            $alert_message = "El tema '$temaClase' ya ha sido registrado para esta materia.";
-            $alert_type = "error";
-            $alert_title = "¡Error!";
-        } else {
-            // Manejo del archivo (si existe)
-            if (isset($_FILES['archivo_complementario']) && $_FILES['archivo_complementario']['error'] == 0) {
-                $maxFileSize = 5 * 1024 * 1024; // Tamaño máximo 5MB
-                $carpetaDestino = '../archivos/'; // Carpeta para almacenar los archivos
+    if ($stmt->rowCount() > 0) {
+        // La clase ya existe, mostrar un mensaje de error
+        $alert_message = "Ya existe una clase con la misma materia, tema y fecha.";
+        $alert_type = "error";
+        $alert_title = "Error de registro";
+    } else {
+        // Si no existe, proceder a insertar la nueva clase
+        $queryInsert = "INSERT INTO clases (materia_id, fecha, tema) VALUES (:materia_id, :fecha, :tema)";
+        $stmtInsert = $conn->prepare($queryInsert);
+        $stmtInsert->bindParam(':materia_id', $materiaId, PDO::PARAM_INT);
+        $stmtInsert->bindParam(':fecha', $fecha, PDO::PARAM_STR);
+        $stmtInsert->bindParam(':tema', $tema, PDO::PARAM_STR);
+        $stmtInsert->execute();
+        
+        // Obtener el ID de la clase recién creada
+        $claseId = $conn->lastInsertId();
 
-                // Verificar el tamaño del archivo
-                if ($_FILES['archivo_complementario']['size'] <= $maxFileSize) {
-                    $nombreArchivo = $_FILES['archivo_complementario']['name'];
-                    $rutaTemporal = $_FILES['archivo_complementario']['tmp_name'];
+        // Procesar el archivo complementario
+        if (isset($_FILES['archivo_complementario']) && $_FILES['archivo_complementario']['error'] == UPLOAD_ERR_OK) {
+            // Validar el archivo
+            $file = $_FILES['archivo_complementario'];
+            $allowedFileType = 'application/pdf';
+            $maxFileSize = 5 * 1024 * 1024; // 5MB
 
-                    // Verificar la extensión del archivo (permitir solo ciertas extensiones)
-                    $extensionesPermitidas = ['pdf', 'doc', 'docx', 'jpg', 'png', 'zip', 'txt']; // Agrega más extensiones si lo deseas
-                    $ext = pathinfo($nombreArchivo, PATHINFO_EXTENSION);
-
-                    if (in_array($ext, $extensionesPermitidas)) {
-                        // Crear un nombre único para el archivo
-                        $nombreArchivoUnico = uniqid('archivo_', true) . '.' . $ext;
-                        $rutaFinal = $carpetaDestino . $nombreArchivoUnico;
-
-                        // Intentar mover el archivo a la carpeta destino
-                        if (move_uploaded_file($rutaTemporal, $rutaFinal)) {
-                            $archivoRuta = $rutaFinal; // Guardar la ruta del archivo
-                        } else {
-                            $alert_message = "Error al mover el archivo al servidor.";
-                            $alert_type = "error";
-                            $alert_title = "¡Error!";
-                        }
-                    } else {
-                        $alert_message = "El archivo tiene una extensión no permitida. Solo se permiten archivos PDF, DOC, DOCX, JPG, PNG y ZIP.";
-                        $alert_type = "error";
-                        $alert_title = "¡Error!";
-                    }
-                } else {
-                    $alert_message = "El archivo no debe exceder los 5 MB.";
-                    $alert_type = "error";
-                    $alert_title = "¡Error!";
-                }
-            }
-
-            // Registrar la clase en la base de datos
-            try {
-                // Insertar la clase en la tabla 'clases'
-                $query = "INSERT INTO clases (materia_id, tema, fecha) VALUES (:materia_id, :tema, NOW())";
-                $stmt = $conn->prepare($query);
-                $stmt->bindParam(':materia_id', $materiaId, PDO::PARAM_INT);
-                $stmt->bindParam(':tema', $temaClase, PDO::PARAM_STR);
-                $stmt->execute();
-
-                // Si se subió un archivo, guardar la información en la tabla 'archivos'
-                if ($archivoRuta) {
-                    $queryArchivo = "INSERT INTO archivos (nombre_archivo, tipo_archivo, ruta_archivo, usuario_id) 
-                     VALUES (:nombre_archivo, :tipo_archivo, :ruta_archivo, :usuario_id)";
-                    $stmtArchivo = $conn->prepare($queryArchivo);
-                    $stmtArchivo->bindParam(':nombre_archivo', $nombreArchivo, PDO::PARAM_STR);
-                    $stmtArchivo->bindParam(':tipo_archivo', $ext, PDO::PARAM_STR); // Guardar la extensión como tipo de archivo
-                    $stmtArchivo->bindParam(':ruta_archivo', $archivoRuta, PDO::PARAM_STR);
-                    $stmtArchivo->bindParam(':usuario_id', $profesorId, PDO::PARAM_INT);
-                    $stmtArchivo->execute();
-                }
-
-                // Mostrar mensaje de éxito
-                $alert_message = "Clase registrada exitosamente";
-                $alert_type = "success";
-                $alert_title = "¡Éxito!";
-            } catch (PDOException $e) {
-                // Mostrar error si ocurre algún problema
-                $alert_message = "Error al registrar la clase: " . $e->getMessage();
+            if ($file['type'] !== $allowedFileType) {
+                $alert_message = "Solo se permite un archivo PDF.";
                 $alert_type = "error";
-                $alert_title = "¡Error!";
+                $alert_title = "Error en el archivo";
+            } elseif ($file['size'] > $maxFileSize) {
+                $alert_message = "El archivo no debe superar los 5MB.";
+                $alert_type = "error";
+                $alert_title = "Error en el archivo";
+            } else {
+                // Mover el archivo al directorio de destino
+                $uploadDir = '../uploads/clases/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                $fileName = time() . "_" . basename($file['name']);
+                $filePath = $uploadDir . $fileName;
+
+                if (move_uploaded_file($file['tmp_name'], $filePath)) {
+                    // Registrar el archivo en la base de datos
+                    $queryFile = "INSERT INTO archivos_clase (nombre_archivo, tipo_archivo, ruta_archivo, usuario_id, clase_id) 
+                                  VALUES (:nombre_archivo, :tipo_archivo, :ruta_archivo, :usuario_id, :clase_id)";
+                    $stmtFile = $conn->prepare($queryFile);
+                    $stmtFile->bindParam(':nombre_archivo', $file['name'], PDO::PARAM_STR);
+                    $stmtFile->bindParam(':tipo_archivo', $file['type'], PDO::PARAM_STR);
+                    $stmtFile->bindParam(':ruta_archivo', $filePath, PDO::PARAM_STR);
+                    $stmtFile->bindParam(':usuario_id', $profesorId, PDO::PARAM_INT);
+                    $stmtFile->bindParam(':clase_id', $claseId, PDO::PARAM_INT);
+                    $stmtFile->execute();
+
+                    $alert_message = "Clase registrada exitosamente con el archivo complementario.";
+                    $alert_type = "success";
+                    $alert_title = "Éxito";
+                } else {
+                    $alert_message = "Hubo un error al cargar el archivo.";
+                    $alert_type = "error";
+                    $alert_title = "Error en el archivo";
+                }
             }
         }
-    } else {
-        // Mostrar mensaje de error si algún campo está vacío
-        $alert_message = "Por favor complete todos los campos del formulario.";
-        $alert_type = "error";
-        $alert_title = "¡Error!";
     }
 }
 ?>
@@ -217,7 +196,7 @@ if (isset($_POST['registrar'])) {
 										<input class="form-control" type="text" id="tema" name="tema" required>
 									</div>
                                     <div class="form-group">
-										      <label class="control-label">Archivo Complementario ||  Solo se almacenaran archivos con las extensiones pdf, doc, docx, jpg, png, zip, txt</label>
+										      <label class="control-label">Archivo Complementario ||  Solo se permite un archivo pdf de máximo 5MB</label>
 										      <div>
 										        <input type="text" readonly="" class="form-control" placeholder="Buscar...">
 										        <input type="file" name="archivo_complementario">
@@ -247,28 +226,52 @@ if (isset($_POST['registrar'])) {
         $.material.init();
     </script>
     <script>
-    // Validar tamaño del archivo antes de enviar el formulario
-    document.getElementById('formcurso').addEventListener('submit', function (e) {
-    const archivo = document.querySelector('input[type="file"]'); // Input del archivo
-    const maxFileSize = 5 * 1024 * 1024; // Tamaño máximo en bytes (5MB)
+   // Validar tamaño del archivo y tipo antes de enviar el formulario
+        document.getElementById('formcurso').addEventListener('submit', function (e) {
+            const archivo = document.querySelector('input[type="file"]'); // Input del archivo
+            const maxFileSize = 5 * 1024 * 1024; // Tamaño máximo en bytes (5MB)
+            const allowedFileType = 'application/pdf'; // Tipo de archivo permitido (PDF)
 
-    // Validar si se seleccionó un archivo y si su tamaño supera el máximo
-    if (archivo.files.length > 0 && archivo.files[0].size > maxFileSize) {
-        e.preventDefault(); // Evitar el envío del formulario
+            // Validar si se seleccionó un archivo
+            if (archivo.files.length > 0) {
+                const file = archivo.files[0];
 
-        // Mostrar alerta con SweetAlert
-        swal({
-            title: 'Archivo demasiado grande',
-            html: 'El archivo seleccionado no debe superar los 5 MB. Por favor, seleccione un archivo más pequeño.',
-            type: 'error',
-            showConfirmButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'Entendido',
+                // Validar si el archivo es un PDF
+                if (file.type !== allowedFileType) {
+                    e.preventDefault(); // Evitar el envío del formulario
+
+                    // Mostrar alerta con SweetAlert
+                    swal({
+                        title: 'Tipo de archivo no válido',
+                        html: 'Por favor, seleccione un archivo en formato PDF.',
+                        type: 'error',
+                        showConfirmButton: true,
+                        confirmButtonColor: '#d33',
+                        confirmButtonText: 'Entendido',
+                    });
+
+                    return false; // Terminar ejecución si el archivo no es un PDF
+                }
+
+                // Validar si el tamaño del archivo supera el máximo
+                if (file.size > maxFileSize) {
+                    e.preventDefault(); // Evitar el envío del formulario
+
+                    // Mostrar alerta con SweetAlert
+                    swal({
+                        title: 'Archivo demasiado grande',
+                        html: 'El archivo seleccionado no debe superar los 5 MB. Por favor, seleccione un archivo más pequeño.',
+                        type: 'error',
+                        showConfirmButton: true,
+                        confirmButtonColor: '#d33',
+                        confirmButtonText: 'Entendido',
+                    });
+
+                    return false; // Terminar ejecución si el archivo supera el tamaño
+                }
+            }
         });
 
-        return false; // Terminar ejecución si el archivo no cumple
-    }
-});
 
     // Validar habilitación del botón de envío basado en los campos del formulario
     const form = document.getElementById('formcurso');
